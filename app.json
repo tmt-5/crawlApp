@@ -1,17 +1,21 @@
 {
   "expo": {
-    "name": "crawlApp",
-    "slug": "crawlApp",
+    "name": "Crawl",
+    "slug": "crawl",
+    "owner": "tmt-5-team",
+    "scheme": "crawl",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "backgroundColor": "#f4ece0",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.anonymous.crawl"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#f4ece0",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +24,25 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#f4ece0"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4bb14557-cc1e-499c-9681-67e18a61aaa2"
+      }
     }
   }
 }
