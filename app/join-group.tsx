@@ -24,8 +24,12 @@ export default function JoinGroupScreen() {
         return;
       }
       const result = await joinGroupByCode(code, profile);
-      if (!result) {
+      if (result.status === "not_found") {
         setError("Fant ingen gruppe med denne koden.");
+        return;
+      }
+      if (result.status === "completed") {
+        setError("Denne crawlen er allerede fullført.");
         return;
       }
       await saveMembership(result.group.id, result.member.id);

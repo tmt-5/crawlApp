@@ -1,28 +1,25 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheet from "../components/BottomSheet";
 import Button from "../components/Button";
 import CrawlMap from "../components/CrawlMap";
 import CrawlProgress from "../components/CrawlProgress";
 import RatingSlider from "../components/RatingSlider";
-import { createCheckin } from "../lib/checkins";
-import { getGroup } from "../lib/groups";
+import { saveCheckin } from "../lib/checkins";
+import { advanceToStop, completeCrawl, getGroup } from "../lib/groups";
 import { getRoute } from "../lib/routes";
 import { getMembership } from "../lib/storage";
 import type { Venue } from "../types/venue";
 
 export default function CrawlScreen() {
-  const { groupId, stopIndex } = useLocalSearchParams<{
-    groupId: string;
-    stopIndex: string;
-  }>();
-  const index = Number(stopIndex ?? "0");
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const insets = useSafeAreaInsets();
 
   const [venues, setVenues] = useState<Venue[]>([]);
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,17 +28,30 @@ export default function CrawlScreen() {
   const [ratingAtmosphere, setRatingAtmosphere] = useState<number | null>(null);
   const [ratingOverall, setRatingOverall] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!groupId) return;
-    Promise.all([getGroup(groupId), getMembership(groupId)])
-      .then(async ([group, member]) => {
-        const route = group?.route_id ? await getRoute(group.route_id) : null;
-        setVenues(route?.stops.map((stop) => stop.venue) ?? []);
-        setMemberId(member);
-      })
-      .catch(() => setError("Klarte ikke å hente ruten."))
-      .finally(() => setLoading(false));
-  }, [groupId]);
+  // The group's position is stored on the group, so reopening the crawl
+  // (or someone else moving the group on) lands on the right stop.
+  useFocusEffect(
+    useCallback(() => {
+      if (!groupId) return;
+      Promise.all([getGroup(groupId), getMembership(groupId)])
+        .then(async ([group, member]) => {
+          if (group?.status === "completed") {
+            router.replace({ pathname: "/report", params: { groupId } });
+            return;
+          }
+          const route = group?.route_id ? await getRoute(group.route_id) : null;
+          const stops = route?.stops.map((stop) => stop.venue) ?? [];
+          setVenues(stops);
+          setIndex(Math.min(group?.current_stop_index ?? 0, Math.max(stops.length - 1, 0)));
+          setMemberId(member);
+          setLoading(false);
+        })
+        .catch(() => {
+          setError("Klarte ikke å hente ruten.");
+          setLoading(false);
+        });
+    }, [groupId])
+  );
 
   useEffect(() => {
     setRatingBeer(null);
@@ -51,38 +61,35 @@ export default function CrawlScreen() {
 
   const venue = venues[index];
   const isLastStop = index === venues.length - 1;
-  const canConfirm =
-    ratingBeer !== null && ratingAtmosphere !== null && ratingOverall !== null;
-
-  const buttonLabel = useMemo(
-    () => (isLastStop ? "Fullfør crawlen" : "Neste stopp"),
-    [isLastStop]
-  );
 
   const handleNext = async () => {
-    if (!canConfirm || saving || !venue || !groupId || !memberId) return;
+    if (saving || !venue || !groupId || !memberId) return;
     setSaving(true);
     setError(null);
     try {
-      await createCheckin({
+      await saveCheckin({
         group_id: groupId,
         venue_id: venue.id,
         member_id: memberId,
-        rating_beer: ratingBeer!,
-        rating_atmosphere: ratingAtmosphere!,
-        rating_overall: ratingOverall!,
+        rating_beer: ratingBeer,
+        rating_atmosphere: ratingAtmosphere,
+        rating_overall: ratingOverall,
       });
 
       if (isLastStop) {
+        await completeCrawl(groupId, venues.length);
         router.replace({ pathname: "/report", params: { groupId } });
-      } else {
-        router.replace({
-          pathname: "/crawl",
-          params: { groupId, stopIndex: String(index + 1) },
-        });
+        return;
       }
+
+      const group = await advanceToStop(groupId, index + 1);
+      if (group.status === "completed") {
+        router.replace({ pathname: "/report", params: { groupId } });
+        return;
+      }
+      setIndex(Math.min(group.current_stop_index, venues.length - 1));
     } catch {
-      setError("Klarte ikke å lagre vurderingen. Prøv igjen.");
+      setError("Klarte ikke å lagre. Prøv igjen.");
     } finally {
       setSaving(false);
     }
@@ -184,9 +191,14 @@ export default function CrawlScreen() {
           </View>
 
           <View className="gap-5 pt-4">
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Vurder stedet
-            </Text>
+            <View className="gap-1">
+              <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
+                Vurder stedet
+              </Text>
+              <Text className="text-xs leading-4 text-ink-muted">
+                Valgfritt. Hopp over hvis dere bare vil videre.
+              </Text>
+            </View>
             <RatingSlider label="Øl" value={ratingBeer} onChange={setRatingBeer} />
             <RatingSlider
               label="Stemning"
@@ -206,9 +218,9 @@ export default function CrawlScreen() {
 
           <View className="pb-2 pt-4">
             <Button
-              label={saving ? "Lagrer…" : buttonLabel}
+              label={saving ? "Lagrer…" : isLastStop ? "Fullfør crawlen" : "Neste stopp"}
               onPress={handleNext}
-              disabled={!canConfirm || saving}
+              disabled={saving}
             />
           </View>
         </ScrollView>

@@ -20,9 +20,9 @@ export interface Checkin {
   group_id: string;
   venue_id: string;
   member_id: string;
-  rating_beer: number;
-  rating_atmosphere: number;
-  rating_overall: number;
+  rating_beer: number | null;
+  rating_atmosphere: number | null;
+  rating_overall: number | null;
   created_at: string;
 }
 
@@ -30,7 +30,7 @@ export interface CheckinInput {
   group_id: string;
   venue_id: string;
   member_id: string;
-  rating_beer: number;
-  rating_atmosphere: number;
-  rating_overall: number;
+  rating_beer: number | null;
+  rating_atmosphere: number | null;
+  rating_overall: number | null;
 }

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import RouteStrip from "../components/RouteStrip";
@@ -37,11 +37,14 @@ export default function GroupLobbyScreen() {
     setRoute(groupData?.route_id ? await getRoute(groupData.route_id) : null);
   }, [groupId]);
 
-  useEffect(() => {
-    load()
-      .catch(() => setError("Klarte ikke å hente gruppen."))
-      .finally(() => setLoading(false));
-  }, [load]);
+  // Reload on focus so the stop number is current after coming back from the crawl.
+  useFocusEffect(
+    useCallback(() => {
+      load()
+        .catch(() => setError("Klarte ikke å hente gruppen."))
+        .finally(() => setLoading(false));
+    }, [load])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -59,15 +62,19 @@ export default function GroupLobbyScreen() {
 
   const handleStart = async () => {
     if (!groupId || !group || starting) return;
+    if (group.status === "completed") {
+      router.push({ pathname: "/report", params: { groupId } });
+      return;
+    }
     if (group.status === "active") {
-      router.push({ pathname: "/crawl", params: { groupId, stopIndex: "0" } });
+      router.push({ pathname: "/crawl", params: { groupId } });
       return;
     }
     setStarting(true);
     setError(null);
     try {
       await startCrawl(groupId);
-      router.replace({ pathname: "/crawl", params: { groupId, stopIndex: "0" } });
+      router.replace({ pathname: "/crawl", params: { groupId } });
     } catch {
       setError("Klarte ikke å starte crawlen. Prøv igjen.");
     } finally {
@@ -109,7 +116,11 @@ export default function GroupLobbyScreen() {
 
         <View className="gap-1">
           <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-            {group?.status === "active" ? "Crawlen pågår" : "Lobby"}
+            {group?.status === "completed"
+              ? "Crawlen er fullført"
+              : group?.status === "active"
+                ? "Crawlen pågår"
+                : "Lobby"}
           </Text>
           <Text className="font-display text-3xl uppercase text-ink" style={{ lineHeight: 34 }}>
             {group?.name ?? "Gruppe"}
@@ -198,7 +209,16 @@ export default function GroupLobbyScreen() {
         {error ? <Text className="font-body-bold text-sm text-oxblood">{error}</Text> : null}
         <Button
           label={
-            starting ? "Starter…" : group?.status === "active" ? "Gå til crawlen" : "Start crawlen"
+            starting
+              ? "Starter…"
+              : group?.status === "completed"
+                ? "Se rapporten"
+                : group?.status === "active"
+                  ? `Gå til crawlen · stopp ${Math.min(
+                      group.current_stop_index + 1,
+                      route?.stops.length ?? 1
+                    )}`
+                  : "Start crawlen"
           }
           onPress={handleStart}
           disabled={!route || starting}

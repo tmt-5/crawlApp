@@ -1,3 +1,4 @@
+import { getMembership } from "./storage";
 import { supabase } from "./supabase";
 import type { UserProfile } from "../types/user";
 import type { Group, Member } from "../types/group";
@@ -60,10 +61,12 @@ export async function createGroup(
   throw new Error("Kunne ikke generere en unik invitasjonskode.");
 }
 
-export async function joinGroupByCode(
-  code: string,
-  profile: UserProfile
-): Promise<{ group: Group; member: Member } | null> {
+export type JoinResult =
+  | { status: "joined"; group: Group; member: Member }
+  | { status: "not_found" }
+  | { status: "completed" };
+
+export async function joinGroupByCode(code: string, profile: UserProfile): Promise<JoinResult> {
   const normalizedCode = code.trim().toUpperCase();
 
   const { data: group, error } = await supabase
@@ -73,10 +76,24 @@ export async function joinGroupByCode(
     .maybeSingle();
 
   if (error) throw error;
-  if (!group) return null;
+  if (!group) return { status: "not_found" };
+  if (group.status === "completed") return { status: "completed" };
+
+  // Entering the same code twice on this device reuses the member row
+  // instead of adding a second copy of you to the group.
+  const existingMemberId = await getMembership(group.id);
+  if (existingMemberId) {
+    const { data: existing, error: memberError } = await supabase
+      .from("members")
+      .select()
+      .eq("id", existingMemberId)
+      .maybeSingle();
+    if (memberError) throw memberError;
+    if (existing) return { status: "joined", group, member: existing };
+  }
 
   const member = await addMember(group.id, profile);
-  return { group, member };
+  return { status: "joined", group, member };
 }
 
 export async function getGroup(groupId: string): Promise<Group | null> {
@@ -114,4 +131,30 @@ export async function getMembers(groupId: string): Promise<Member[]> {
 
   if (error) throw error;
   return data ?? [];
+}
+
+// Moves the group forward to `nextIndex`. The filter makes it a no-op if
+// someone else already moved the group further, so it never goes backwards.
+// Returns the group as it is after the update.
+export async function advanceToStop(groupId: string, nextIndex: number): Promise<Group> {
+  const { error } = await supabase
+    .from("groups")
+    .update({ current_stop_index: nextIndex })
+    .eq("id", groupId)
+    .lt("current_stop_index", nextIndex);
+
+  if (error) throw error;
+
+  const group = await getGroup(groupId);
+  if (!group) throw new Error("Fant ikke gruppen.");
+  return group;
+}
+
+export async function completeCrawl(groupId: string, stopCount: number): Promise<void> {
+  const { error } = await supabase
+    .from("groups")
+    .update({ status: "completed", current_stop_index: stopCount })
+    .eq("id", groupId);
+
+  if (error) throw error;
 }

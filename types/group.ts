@@ -7,6 +7,7 @@ export interface Group {
   status: GroupStatus;
   city: string | null;
   route_id: string | null;
+  current_stop_index: number;
   created_at: string;
 }
 
