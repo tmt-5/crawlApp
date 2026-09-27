@@ -1,15 +1,29 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import { joinGroupByCode } from "../lib/groups";
 import { getProfile, saveMembership } from "../lib/storage";
 
 export default function JoinGroupScreen() {
-  const [code, setCode] = useState("");
+  // Invite links open this screen with ?code= filled in.
+  const params = useLocalSearchParams<{ code?: string }>();
+  const linkCode = (params.code ?? "").toUpperCase();
+  const [code, setCode] = useState(linkCode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Someone arriving from a link without a profile picks name and avatar
+  // first, then comes back here with the code still filled in.
+  useEffect(() => {
+    if (!linkCode) return;
+    getProfile().then((profile) => {
+      if (!profile) {
+        router.replace({ pathname: "/avatar", params: { next: "join-group", code: linkCode } });
+      }
+    });
+  }, [linkCode]);
 
   const canConfirm = useMemo(() => code.trim().length > 0, [code]);
 
@@ -20,7 +34,7 @@ export default function JoinGroupScreen() {
     try {
       const profile = await getProfile();
       if (!profile) {
-        router.replace({ pathname: "/avatar", params: { next: "join-group" } });
+        router.replace({ pathname: "/avatar", params: { next: "join-group", code } });
         return;
       }
       const result = await joinGroupByCode(code, profile);

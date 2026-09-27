@@ -1,19 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import MapView, { Marker, UrlTile } from "react-native-maps";
+import MapView, { Marker, Polyline, UrlTile } from "react-native-maps";
 import type { Region } from "react-native-maps";
+import { legPath } from "../lib/geo";
 import type { Venue } from "../types/venue";
+import {
+  legStatus,
+  stopStatus,
+  type CrawlMapProps,
+  type LegStatus,
+  type StopStatus,
+} from "./CrawlMap.types";
 
-type StopStatus = "done" | "current" | "upcoming";
+// Native map. The web map (CrawlMap.web.tsx) is the primary one for now; this
+// keeps the same props and draws stops and legs, without live positions.
 
 type MapVenue = {
   venue: Venue;
   status: StopStatus;
 };
 
-type CrawlMapProps = {
-  venues: Venue[];
-  currentIndex: number;
+const LEG_STYLE: Record<LegStatus, { strokeColor: string; lineDashPattern?: number[] }> = {
+  walked: { strokeColor: "rgba(36,29,24,0.5)" },
+  current: { strokeColor: "#8c2f24" },
+  upcoming: { strokeColor: "#8c2f24", lineDashPattern: [2, 9] },
 };
 
 const OSLO_FALLBACK: Region = {
@@ -135,7 +145,8 @@ function Callout({ venue }: { venue: Venue }) {
   );
 }
 
-export default function CrawlMap({ venues, currentIndex }: CrawlMapProps) {
+export default function CrawlMap({ stops, currentIndex }: CrawlMapProps) {
+  const venues = useMemo(() => stops.map((stop) => stop.venue), [stops]);
   const mapRef = useRef<MapView>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -143,7 +154,7 @@ export default function CrawlMap({ venues, currentIndex }: CrawlMapProps) {
     () =>
       venues.map((venue, index) => ({
         venue,
-        status: index < currentIndex ? "done" : index === currentIndex ? "current" : "upcoming",
+        status: stopStatus(index, currentIndex),
       })),
     [venues, currentIndex]
   );
@@ -192,6 +203,27 @@ export default function CrawlMap({ venues, currentIndex }: CrawlMapProps) {
           maximumZ={19}
           shouldReplaceMapContent
         />
+        {stops.map((_, index) => {
+          const path = legPath(stops, index);
+          if (!path) return null;
+          const coordinates = path.map(([longitude, latitude]) => ({ latitude, longitude }));
+          return (
+            <Fragment key={`leg-${index}`}>
+              <Polyline
+                coordinates={coordinates}
+                strokeColor="rgba(36,29,24,0.18)"
+                strokeWidth={9}
+                lineCap="round"
+              />
+              <Polyline
+                coordinates={coordinates}
+                strokeWidth={5}
+                lineCap="round"
+                {...LEG_STYLE[legStatus(index, currentIndex)]}
+              />
+            </Fragment>
+          );
+        })}
         {located.map(({ venue, status }, index) => (
           <Marker
             key={venue.id}

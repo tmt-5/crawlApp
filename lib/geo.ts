@@ -1,7 +1,10 @@
-import type { Venue } from "../types/venue";
+import type { LngLat, RouteVenueWithVenue } from "../types/route";
+
+type Point = { latitude: number | null; longitude: number | null };
 
 const EARTH_RADIUS_M = 6_371_000;
-// Straight-line distance undercounts city walking; streets add roughly a third.
+// Fallback for legs without a computed walking route: straight-line distance
+// undercounts city walking; streets add roughly a third.
 const STREET_FACTOR = 1.3;
 const WALK_METERS_PER_MIN = 80;
 
@@ -9,7 +12,8 @@ function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
-function distanceMeters(a: Venue, b: Venue): number | null {
+// Straight-line distance, or null if either point lacks coordinates.
+export function metersBetween(a: Point, b: Point): number | null {
   if (a.latitude == null || a.longitude == null || b.latitude == null || b.longitude == null) {
     return null;
   }
@@ -18,27 +22,63 @@ function distanceMeters(a: Venue, b: Venue): number | null {
   const h =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h)) * STREET_FACTOR;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
-export function walkMinutes(from: Venue, to: Venue): number | null {
-  const meters = distanceMeters(from, to);
-  return meters == null ? null : Math.max(1, Math.round(meters / WALK_METERS_PER_MIN));
-}
+export type Walk = { meters: number; minutes: number };
 
-export function routeWalkMeters(venues: Venue[]): number {
-  let total = 0;
-  for (let i = 1; i < venues.length; i++) {
-    total += distanceMeters(venues[i - 1], venues[i]) ?? 0;
+// The walk arriving at stops[index] from the stop before it. Uses the computed
+// street route when there is one, otherwise an estimate from coordinates.
+export function legWalk(stops: RouteVenueWithVenue[], index: number): Walk | null {
+  const stop = stops[index];
+  const previous = stops[index - 1];
+  if (!stop || !previous) return null;
+
+  if (stop.leg_distance_m != null && stop.leg_duration_s != null) {
+    return {
+      meters: stop.leg_distance_m,
+      minutes: Math.max(1, Math.round(stop.leg_duration_s / 60)),
+    };
   }
-  return total;
+
+  const straight = metersBetween(previous.venue, stop.venue);
+  if (straight == null) return null;
+  const meters = straight * STREET_FACTOR;
+  return { meters, minutes: Math.max(1, Math.round(meters / WALK_METERS_PER_MIN)) };
+}
+
+export function routeWalk(stops: RouteVenueWithVenue[]): Walk {
+  let meters = 0;
+  let minutes = 0;
+  for (let i = 1; i < stops.length; i++) {
+    const leg = legWalk(stops, i);
+    if (!leg) continue;
+    meters += leg.meters;
+    minutes += leg.minutes;
+  }
+  return { meters, minutes };
+}
+
+// The line to draw for the leg arriving at stops[index]: the street route when
+// computed, a straight line otherwise.
+export function legPath(stops: RouteVenueWithVenue[], index: number): LngLat[] | null {
+  const stop = stops[index];
+  const previous = stops[index - 1];
+  if (!stop || !previous) return null;
+  if (stop.leg_geometry && stop.leg_geometry.length > 1) return stop.leg_geometry;
+
+  const { venue: a } = previous;
+  const { venue: b } = stop;
+  if (a.latitude == null || a.longitude == null || b.latitude == null || b.longitude == null) {
+    return null;
+  }
+  return [
+    [a.longitude, a.latitude],
+    [b.longitude, b.latitude],
+  ];
 }
 
 // "1,2" — Norwegian decimal comma, unit left to the caller.
 export function formatKm(meters: number): string {
   return (meters / 1000).toFixed(1).replace(".", ",");
-}
-
-export function walkMinutesForMeters(meters: number): number {
-  return Math.round(meters / WALK_METERS_PER_MIN);
 }

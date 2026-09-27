@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import CrawlMap from "../components/CrawlMap";
-import { formatKm, routeWalkMeters, walkMinutes } from "../lib/geo";
+import { formatKm, legWalk, routeWalk } from "../lib/geo";
 import { getRoute } from "../lib/routes";
 import { getProfile } from "../lib/storage";
 import type { CrawlRouteWithStops } from "../types/route";
@@ -56,8 +56,7 @@ export default function RouteDetailScreen() {
     );
   }
 
-  const venues = route.stops.map((stop) => stop.venue);
-  const meters = routeWalkMeters(venues);
+  const { meters } = routeWalk(route.stops);
 
   return (
     <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
@@ -93,8 +92,8 @@ export default function RouteDetailScreen() {
           </Text>
         </View>
 
-        <View className="h-[260px] border-b-[3px] border-ink">
-          <CrawlMap venues={venues} currentIndex={-1} />
+        <View className="h-[300px] border-b-[3px] border-ink">
+          <CrawlMap stops={route.stops} currentIndex={-1} mode="embedded" />
         </View>
 
         <View className="gap-5 px-5 pt-5">
@@ -104,8 +103,7 @@ export default function RouteDetailScreen() {
 
           <View className="border-[3px] border-ink bg-paper-raised">
             {route.stops.map((stop, index) => {
-              const previous = index > 0 ? route.stops[index - 1].venue : null;
-              const minutes = previous ? walkMinutes(previous, stop.venue) : null;
+              const minutes = legWalk(route.stops, index)?.minutes ?? null;
               return (
                 <Fragment key={stop.id}>
                   {index > 0 ? (

@@ -6,7 +6,7 @@ import Button from "../components/Button";
 import Photo from "../components/Photo";
 import RouteStrip from "../components/RouteStrip";
 import { CITIES } from "../lib/cities";
-import { formatKm, routeWalkMeters, walkMinutesForMeters } from "../lib/geo";
+import { formatKm, routeWalk } from "../lib/geo";
 import { getGroup } from "../lib/groups";
 import { getRoutesByCity } from "../lib/routes";
 import { getLastGroupId, getProfile } from "../lib/storage";
@@ -192,7 +192,7 @@ export default function ExploreScreen() {
 
 function RouteCard({ route }: { route: CrawlRouteWithStops }) {
   const stopVenues = route.stops.map((stop) => stop.venue);
-  const meters = routeWalkMeters(stopVenues);
+  const { meters, minutes } = routeWalk(route.stops);
   const cover = stopVenues.find((venue) => venue.image_url)?.image_url;
 
   return (
@@ -243,7 +243,7 @@ function RouteCard({ route }: { route: CrawlRouteWithStops }) {
         {meters > 0 ? (
           <>
             <Stat value={formatKm(meters)} label="km" divider />
-            <Stat value={String(walkMinutesForMeters(meters))} label="min" divider />
+            <Stat value={String(minutes)} label="min" divider />
           </>
         ) : null}
       </View>

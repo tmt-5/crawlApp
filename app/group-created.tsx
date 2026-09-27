@@ -1,7 +1,9 @@
-import { Share, Text, View } from "react-native";
+import { useState } from "react";
+import { Platform, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../components/Button";
+import { shareInvite } from "../lib/invite";
 
 export default function GroupCreatedScreen() {
   const { groupId, name, inviteCode, routeName } = useLocalSearchParams<{
@@ -11,11 +13,14 @@ export default function GroupCreatedScreen() {
     routeName?: string;
   }>();
 
-  const handleShare = () => {
-    const route = routeName ? ` Vi tar ${routeName}.` : "";
-    Share.share({
-      message: `Bli med i ${name} på Crawl.${route} Koden er ${inviteCode}.`,
-    }).catch(() => {});
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
+    const outcome = await shareInvite({ groupName: name, routeName, code: inviteCode });
+    if (outcome === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   return (
@@ -52,12 +57,17 @@ export default function GroupCreatedScreen() {
           </View>
 
           <Text className="px-4 text-center text-base leading-6 text-ink-body">
-            Send koden til gjengen. De åpner appen, trykker «Har kode» og skriver den inn.
+            {Platform.OS === "web"
+              ? "Send lenken til gjengen. Den åpner gruppen med koden fylt inn."
+              : "Send koden til gjengen. De åpner appen, trykker «Har kode» og skriver den inn."}
           </Text>
         </View>
 
         <View className="gap-3 pb-10">
-          <Button label="Del koden" onPress={handleShare} />
+          <Button
+            label={copied ? "Lenke kopiert" : Platform.OS === "web" ? "Del lenken" : "Del koden"}
+            onPress={handleShare}
+          />
           <Button
             label="Til lobbyen"
             variant="secondary"

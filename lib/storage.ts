@@ -31,3 +31,19 @@ export async function getMembership(groupId: string): Promise<string | null> {
 export async function getLastGroupId(): Promise<string | null> {
   return AsyncStorage.getItem(LAST_GROUP_KEY);
 }
+
+const SHARE_LOCATION_PREFIX = "crawl:shareLocation:";
+
+// Whether this device shares its position with the group, remembered so a
+// reload during the crawl doesn't silently stop sharing.
+export async function getShareLocation(groupId: string): Promise<boolean> {
+  return (await AsyncStorage.getItem(`${SHARE_LOCATION_PREFIX}${groupId}`)) === "1";
+}
+
+export async function setShareLocation(groupId: string, enabled: boolean): Promise<void> {
+  if (enabled) {
+    await AsyncStorage.setItem(`${SHARE_LOCATION_PREFIX}${groupId}`, "1");
+  } else {
+    await AsyncStorage.removeItem(`${SHARE_LOCATION_PREFIX}${groupId}`);
+  }
+}

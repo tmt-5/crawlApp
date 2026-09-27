@@ -1,12 +1,13 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import RouteStrip from "../components/RouteStrip";
 import { AVATAR_OPTIONS } from "../lib/avatars";
-import { formatKm, routeWalkMeters } from "../lib/geo";
+import { formatKm, routeWalk } from "../lib/geo";
 import { getGroup, getMembers, startCrawl } from "../lib/groups";
+import { shareInvite } from "../lib/invite";
 import { getRoute } from "../lib/routes";
 import type { Group, Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
@@ -52,12 +53,19 @@ export default function GroupLobbyScreen() {
     setRefreshing(false);
   };
 
-  const handleShare = () => {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = async () => {
     if (!group) return;
-    const routeText = route ? ` Vi tar ${route.name}.` : "";
-    Share.share({
-      message: `Bli med i ${group.name} på Crawl.${routeText} Koden er ${group.invite_code}.`,
-    }).catch(() => {});
+    const outcome = await shareInvite({
+      groupName: group.name,
+      routeName: route?.name,
+      code: group.invite_code,
+    });
+    if (outcome === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   const handleStart = async () => {
@@ -90,7 +98,7 @@ export default function GroupLobbyScreen() {
     );
   }
 
-  const meters = route ? routeWalkMeters(route.stops.map((stop) => stop.venue)) : 0;
+  const meters = route ? routeWalk(route.stops).meters : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
@@ -170,7 +178,9 @@ export default function GroupLobbyScreen() {
             className="min-h-[44px] justify-center border-[3px] border-ink bg-mustard px-4"
             style={squareShadow}
           >
-            <Text className="font-body-bold text-xs uppercase tracking-[.12em] text-ink">Del</Text>
+            <Text className="font-body-bold text-xs uppercase tracking-[.12em] text-ink">
+              {copied ? "Kopiert" : "Del"}
+            </Text>
           </Pressable>
         </View>
 

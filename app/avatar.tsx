@@ -11,7 +11,11 @@ import type { AvatarId } from "../types/user";
 type NextStep = "create-group" | "join-group";
 
 export default function AvatarScreen() {
-  const { next, routeId } = useLocalSearchParams<{ next?: NextStep; routeId?: string }>();
+  const { next, routeId, code } = useLocalSearchParams<{
+    next?: NextStep;
+    routeId?: string;
+    code?: string;
+  }>();
   const [name, setName] = useState("");
   const [avatarId, setAvatarId] = useState<AvatarId | null>(null);
   const [saving, setSaving] = useState(false);
@@ -29,7 +33,7 @@ export default function AvatarScreen() {
       if (next === "create-group" && routeId) {
         router.replace({ pathname: "/create-group", params: { routeId } });
       } else if (next === "join-group") {
-        router.replace("/join-group");
+        router.replace(code ? { pathname: "/join-group", params: { code } } : "/join-group");
       } else {
         router.replace("/");
       }

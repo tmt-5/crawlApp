@@ -35,29 +35,28 @@ Build the UI in a retro dive-bar print style: cream paper, hard black borders, o
 - Layout: flex/grid with `gap`. Screen padding 20px, card padding 14–18px. Hit targets ≥44px.
 
 ## The map (the core screen)
-Leaflet + OpenStreetMap tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`, attribution required), tinted into the palette with a CSS filter on the tile layer:
+Web is the primary platform: `components/CrawlMap.web.tsx` uses **MapLibre GL JS** (v5 — v6 needs `import.meta`, which Metro doesn't handle) with OpenFreeMap vector tiles and our own minimal light style in `lib/mapStyle.ts` (paper background, raised-paper roads, slate-tinted parks and water, few labels). Attribution is required: a slim 9px strip on translucent cream. Native (`components/CrawlMap.tsx`, react-native-maps) takes the same props from `components/CrawlMap.types.ts` and draws stops and legs, but no live positions yet.
 
-```css
-.crawl-tiles { filter: sepia(.42) saturate(.62) contrast(1.04) brightness(1.05); }
-.leaflet-container { background: #f4ece0; }
-```
+Route legs follow the streets: `route_venues.leg_geometry` (plus distance, duration and turn-by-turn `leg_steps`) is precomputed per curated route with `node scripts/compute-route-legs.mjs`, which writes a SQL data migration. Re-run it after changing a route's stops. The app never calls a routing service at runtime; legs without geometry fall back to a straight line.
 
-Route rendered A→B like a directions route, one polyline pair per leg:
-- Casing under every leg: `color:#241d18, weight:9, opacity:.18, lineCap:round`
-- Walked legs: `#241d18`, weight 5, `opacity:.5`
-- Current leg: `#8c2f24`, weight 5, solid
-- Upcoming legs: `#8c2f24`, weight 5, `dashArray:'2 9'`
+Legs, one feature per leg (the leg arriving at a stop):
+- Casing under every leg: ink, width 9, opacity .18, round caps
+- Walked legs: ink, width 5, opacity .5
+- Current leg (the one the group walks next): oxblood, width 5, solid. On a route preview every leg is current.
+- Upcoming legs: oxblood, width 5, dotted
 
-Stop pins are `L.divIcon` circles, `3px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, Alfa Slab One number inside:
+Stop pins are DOM markers, circles with `3px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, Alfa Slab One number inside, 44px hit area:
 - done: ink fill, cream `✓`, 30px
 - current: oxblood fill, cream number, 40px, `4px solid #d9a026`
-- upcoming: cream fill, ink number, 30px, `3px dashed` acceptable
+- upcoming: cream fill, ink number, 30px
 
-Current stop also gets a cream label plate: `2px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, 11px 700 uppercase.
+The current stop (or a tapped one) gets a cream label plate: `2px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, 11px 700 uppercase, max 140px with ellipsis.
 
-Map screen composition: map fills the top ~50%, floating cream info card top-left (stop count + crawl name) and stacked square map controls top-right; a bottom sheet with the current bar, group avatars and Check in / Rate / Info; then a single "next stop" row with walk time; then the tab bar. Turn-by-turn directions is a shorter leg-only map (fixed ~300px, dragging off) over numbered step rows with mustard/outlined arrow squares.
+People sharing their position (Supabase Realtime Presence, nothing stored) are 32px circles with initials: slate for others, oxblood for you, `2px solid` paper border.
 
-Hide Leaflet's zoom control, disable scroll-wheel zoom, keep attribution at 9px on a translucent cream background.
+Controls: stacked mustard square buttons top-right — zoom in, zoom out, frame the whole route, and "show me" when sharing. Rotation and pitch are off. Maps inside a scrolling page use `mode="embedded"` (two fingers / ctrl+scroll to move); full-screen maps take all gestures.
+
+Crawl screen composition: map fills the screen above the sheet, floating cream info card top-left (stop count + route name), controls top-right; a bottom sheet whose visible part has the current bar with a "Sjekk inn" button that opens the sheet, group avatars with the location-sharing chip, and a "Neste: … · N min gange" row. The sheet collapses on moving to the next stop.
 
 ## Copy
 Straightforward and specific — "Stop 3 of 5", "9 min walk · Brunnenstr. → Invalidenstr.", "Sam is 4 min behind". No hype, no emoji, no exclamation marks.
