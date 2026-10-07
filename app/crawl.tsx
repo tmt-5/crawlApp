@@ -8,7 +8,7 @@ import CrawlMap from "../components/CrawlMap";
 import type { MapPerson } from "../components/CrawlMap.types";
 import Icon from "../components/Icon";
 import MemberAvatars from "../components/MemberAvatars";
-import RatingSlider from "../components/RatingSlider";
+import RatingButtons from "../components/RatingButtons";
 import {
   ActionBar,
   Body,
@@ -361,20 +361,18 @@ export default function CrawlScreen() {
                 </View>
               ) : null}
 
-              <View className="gap-1">
-                <Kicker tone="ink">Vurder stedet</Kicker>
-                <Text className="font-body text-[13px] text-ink-soft">
-                  Valgfritt. Hopp over hvis dere bare vil videre.
-                </Text>
-                <View className="gap-2 pt-1">
-                  <RatingSlider label="Øl" value={ratingBeer} onChange={setRatingBeer} />
-                  <RatingSlider
-                    label="Stemning"
-                    value={ratingAtmosphere}
-                    onChange={setRatingAtmosphere}
-                  />
-                  <RatingSlider label="Overall" value={ratingOverall} onChange={setRatingOverall} />
-                </View>
+              <View className="gap-3">
+                <RatingButtons
+                  label="Øl / vin / drikke bestilt"
+                  value={ratingBeer}
+                  onChange={setRatingBeer}
+                />
+                <RatingButtons
+                  label="Stemning"
+                  value={ratingAtmosphere}
+                  onChange={setRatingAtmosphere}
+                />
+                <RatingButtons label="Overall" value={ratingOverall} onChange={setRatingOverall} />
               </View>
 
               <View className="gap-4 border-[1.5px] border-ink bg-paper p-3">
