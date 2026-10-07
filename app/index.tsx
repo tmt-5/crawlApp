@@ -36,6 +36,20 @@ const POSTER = require("../assets/images/route-poster.jpg");
 const matches = (query: string, ...fields: (string | null | undefined)[]) =>
   fields.some((field) => field?.toLowerCase().includes(query));
 
+const LAST_GROUP_LINK = {
+  planning: { pathname: "/group-lobby", kicker: "Gruppen din venter", action: "Fortsett" },
+  active: { pathname: "/crawl", kicker: "Crawlen pågår", action: "Fortsett" },
+  completed: { pathname: "/report", kicker: "Kveldsrapporten er klar", action: "Se rapport" },
+} as const;
+
+// A finished crawl stays on the front page for a day, as the way to its report.
+const REPORT_VISIBLE_MS = 24 * 60 * 60 * 1000;
+
+function stillRelevant(group: Group): boolean {
+  if (group.status !== "completed") return true;
+  return Date.now() - Date.parse(group.completed_at ?? group.created_at) < REPORT_VISIBLE_MS;
+}
+
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const [city, setCity] = useState(CITIES.find((c) => c.available)?.id ?? "Oslo");
@@ -66,7 +80,7 @@ export default function ExploreScreen() {
     useCallback(() => {
       getLastGroupId()
         .then((groupId) => (groupId ? getGroup(groupId) : null))
-        .then((group) => setLastGroup(group && group.status !== "completed" ? group : null))
+        .then((group) => setLastGroup(group && stillRelevant(group) ? group : null))
         .catch(() => setLastGroup(null));
     }, [])
   );
@@ -171,7 +185,7 @@ export default function ExploreScreen() {
               onPress={() =>
                 router.push({
                   // A crawl under way resumes at the current stop; a waiting group goes to the lobby.
-                  pathname: lastGroup.status === "active" ? "/crawl" : "/group-lobby",
+                  pathname: LAST_GROUP_LINK[lastGroup.status].pathname,
                   params: { groupId: lastGroup.id },
                 })
               }
@@ -184,14 +198,14 @@ export default function ExploreScreen() {
               >
                 <View className="flex-1 gap-0.5">
                   <Kicker tone="ochre">
-                    {lastGroup.status === "active" ? "Crawlen pågår" : "Gruppen din venter"}
+                    {LAST_GROUP_LINK[lastGroup.status].kicker}
                   </Kicker>
                   <Text className="font-body-bold text-[16px] text-paper" numberOfLines={1}>
                     {lastGroup.name}
                   </Text>
                 </View>
                 <View className="border border-ochre px-3 py-2">
-                  <Kicker tone="ochre">Fortsett</Kicker>
+                  <Kicker tone="ochre">{LAST_GROUP_LINK[lastGroup.status].action}</Kicker>
                 </View>
               </View>
             </Pressable>

@@ -140,6 +140,13 @@ Billetten, kartkontrollene og oker handlingsknapper har en flat, forskjøvet ble
 ## Gruppeflyten
 Rute → `/group-lobby` → `/crawl`. Lobbyen er én skjerm («samleGjengen» i Figma): åpnet med `routeId` oppretter den gruppa med en gang, så koden vises umiddelbart som stempel (`components/CodeStamp.tsx`, trykk for å dele). Øverst står «Navn og bilde» (`components/ProfileField.tsx`): en rund knapp for profilbildet ved siden av navnefeltet. Du blir med i gruppa idet navnet er skrevet inn, og kan endre navn og bilde der etterpå. Under står hvem som er klare, et frivillig gruppenavn (gruppa heter som ruta til noen gir den et eget navn) og «Start crawl». `/join-group` har det samme navnefeltet over invitasjonskoden og sender folk til lobbyen, eller rett til `/crawl` hvis crawlen er i gang.
 
+## Kveldsrapporten
+`/report?groupId=…` åpnes når crawlen fullføres, og er en vanlig side alle med lenken kan lese. Alt regnes ut fra `checkins` i `lib/report.ts` (`buildReport` er ren og tar gruppe, rute, medlemmer og check-ins): et stopp rangeres på snittet av «Overall», eller snittet av de to andre hvis ingen ga overall. Skjermen viser fakta (stopp, gange fra etappene, varighet, dommere), kveldens vinner, karakterboka, kåringer (beste drikke, beste stemning, kveldens krangel, bunnplassering, strengeste og snilleste dommer) og «Dine karakterer», som bare vises på enheten som ga dem. En kåring vises bare når det er noe å kåre mellom: minst to stopp eller to dommere.
+
+Varigheten kommer fra `groups.started_at` og `completed_at`, som databasen stempler selv med en trigger når statusen endres (`0010_crawl_times.sql`).
+
+Deling: `lib/reportPoster.web.ts` tegner en stående plakat (1080 × 1620) rett på et canvas når siden åpnes, og `lib/reportShare.ts` sender den til delingsarket på mobil (lagre bilde, send til venner) eller laster den ned på desktop. «Del lenke» deler eller kopierer adressen til rapporten. Native har ingen plakat ennå og deler tekst. Forsiden lenker til rapporten i et døgn etter at crawlen er ferdig.
+
 ## Profil
 Det finnes ingen egen profilskjerm og ingen roller. Bare navn er obligatorisk. Profilbildet er frivillig: den runde knappen viser et pluss og åpner et lite panel med «Last opp eget bilde» (`lib/profilePhoto.ts` beskjærer bildet kvadratisk og krymper det til 128px JPEG) og fem tegnede avatarer fra `assets/avatars`. Uten bilde vises initialene. Verdien ligger i `members.avatar` som `""`, `preset:<id>` eller en data-URL, se `lib/avatars.ts`. `components/Avatar.tsx` tegner alle tre variantene.
 

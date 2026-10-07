@@ -9,6 +9,9 @@ export interface Group {
   route_id: string | null;
   current_stop_index: number;
   created_at: string;
+  // Stamped by the database when the crawl starts and ends; null for older crawls.
+  started_at: string | null;
+  completed_at: string | null;
 }
 
 export interface Member {

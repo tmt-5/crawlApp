@@ -28,12 +28,14 @@ npm run web
 
 ## Flyten
 
-Hjem → rute → lobby (navn og frivillig profilbilde) → crawl.
+Hjem → rute → lobby (navn og frivillig profilbilde) → crawl → kveldsrapport.
 
 - Lobbyen oppretter gruppen med en gang og viser koden som deles med gjengen.
 - Andre blir med via lenke eller kode, også etter at crawlen er i gang.
 - Posisjoner deles direkte mellom deltakerne mens crawlen pågår. Ingenting
   lagres.
+- Kveldsrapporten kårer vinnersted og strengeste dommer ut fra karakterene, og
+  kan deles som plakatbilde eller lenke.
 
 ## Ruter og kart
 
