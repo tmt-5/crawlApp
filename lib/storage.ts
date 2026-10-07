@@ -11,7 +11,10 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
 
 export async function getProfile(): Promise<UserProfile | null> {
   const raw = await AsyncStorage.getItem(PROFILE_KEY);
-  return raw ? (JSON.parse(raw) as UserProfile) : null;
+  if (!raw) return null;
+  // Profiles saved before pictures existed have a role id instead of `avatar`.
+  const stored = JSON.parse(raw) as Partial<UserProfile>;
+  return stored.name ? { name: stored.name, avatar: stored.avatar ?? "" } : null;
 }
 
 export async function clearProfile(): Promise<void> {

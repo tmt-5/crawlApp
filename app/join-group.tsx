@@ -3,9 +3,10 @@ import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import Button from "../components/Button";
+import ProfileField from "../components/ProfileField";
 import { Band, Body, ErrorText, Field, Footer, Heading, Kicker, Masthead } from "../components/ui";
 import { joinGroupByCode } from "../lib/groups";
-import { getProfile, saveMembership } from "../lib/storage";
+import { getProfile, saveMembership, saveProfile } from "../lib/storage";
 
 export default function JoinGroupScreen() {
   // Invite links open this screen with ?code= filled in.
@@ -15,29 +16,29 @@ export default function JoinGroupScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Someone arriving from a link without a profile picks name and avatar
-  // first, then comes back here with the code still filled in.
-  useEffect(() => {
-    if (!linkCode) return;
-    getProfile().then((profile) => {
-      if (!profile) {
-        router.replace({ pathname: "/avatar", params: { next: "join-group", code: linkCode } });
-      }
-    });
-  }, [linkCode]);
+  const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
 
-  const canConfirm = useMemo(() => code.trim().length > 0, [code]);
+  useEffect(() => {
+    getProfile().then((profile) => {
+      if (!profile) return;
+      setName((current) => current || profile.name);
+      setAvatar((current) => current || profile.avatar);
+    });
+  }, []);
+
+  const canConfirm = useMemo(
+    () => code.trim().length > 0 && name.trim().length > 0,
+    [code, name]
+  );
 
   const handleConfirm = async () => {
     if (!canConfirm || saving) return;
     setSaving(true);
     setError(null);
     try {
-      const profile = await getProfile();
-      if (!profile) {
-        router.replace({ pathname: "/avatar", params: { next: "join-group", code } });
-        return;
-      }
+      const profile = { name: name.trim(), avatar };
+      await saveProfile(profile);
       const result = await joinGroupByCode(code, profile);
       if (result.status === "not_found") {
         setError("Fant ingen gruppe med denne koden.");
@@ -71,6 +72,13 @@ export default function JoinGroupScreen() {
             <Heading size={36}>Bli med i gruppe</Heading>
             <Body>Skriv inn koden du har fått. Er crawlen i gang, havner du rett på kartet.</Body>
           </View>
+
+          <ProfileField
+            name={name}
+            avatar={avatar}
+            onChangeName={setName}
+            onChangeAvatar={setAvatar}
+          />
 
           <Field
             label="Invitasjonskode"

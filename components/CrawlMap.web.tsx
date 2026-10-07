@@ -2,8 +2,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./CrawlMap.web.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { Asset } from "expo-asset";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
+import { avatarSource } from "../lib/avatars";
 import { legPath } from "../lib/geo";
 import { MAP_STYLE } from "../lib/mapStyle";
 import { colors, fonts, hardShadow } from "../lib/theme";
@@ -399,7 +401,19 @@ function personElement(person: MapPerson): HTMLElement {
     fontSize: "12px",
     zIndex: person.isMe ? "5" : "4",
   });
-  element.textContent = initials(person.name);
+  // A photo or drawn avatar fills the circle; yours gets an ochre edge instead.
+  const source = avatarSource(person.avatar);
+  const uri = typeof source === "number" ? Asset.fromModule(source).uri : source?.uri;
+  if (uri) {
+    Object.assign(element.style, {
+      backgroundImage: `url("${uri}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      borderColor: person.isMe ? OCHRE : PAPER,
+    });
+  } else {
+    element.textContent = initials(person.name);
+  }
   element.title = person.isMe ? `${person.name} (deg)` : person.name;
   return element;
 }

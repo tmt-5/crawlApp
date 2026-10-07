@@ -24,7 +24,7 @@ import { CITIES } from "../lib/cities";
 import { formatKm, formatMinutes, routeWalk } from "../lib/geo";
 import { getGroup } from "../lib/groups";
 import { getRoutesByCity } from "../lib/routes";
-import { getLastGroupId, getProfile } from "../lib/storage";
+import { getLastGroupId } from "../lib/storage";
 import { colors } from "../lib/theme";
 import { getVenuesByCity } from "../lib/venues";
 import type { Group } from "../types/group";
@@ -71,14 +71,7 @@ export default function ExploreScreen() {
     }, [])
   );
 
-  const handleJoin = async () => {
-    const profile = await getProfile();
-    if (profile) {
-      router.push("/join-group");
-    } else {
-      router.push({ pathname: "/avatar", params: { next: "join-group" } });
-    }
-  };
+  const handleJoin = () => router.push("/join-group");
 
   const featured = routes[0];
   const areas = useMemo(

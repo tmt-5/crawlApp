@@ -128,10 +128,10 @@ export default function CrawlScreen() {
     const others = positions.flatMap((shared) => {
       if (shared.memberId === memberId) return [];
       const member = members.find((m) => m.id === shared.memberId);
-      return member ? [{ id: member.id, name: member.name, ...coords(shared), isMe: false }] : [];
+      return member ? [{ id: member.id, name: member.name, avatar: member.avatar, ...coords(shared), isMe: false }] : [];
     });
     const me = members.find((m) => m.id === memberId);
-    return me && position ? [...others, { id: me.id, name: me.name, ...coords(position), isMe: true }] : others;
+    return me && position ? [...others, { id: me.id, name: me.name, avatar: me.avatar, ...coords(position), isMe: true }] : others;
   }, [positions, position, members, memberId]);
 
   // People can join while the crawl is under way, so the code stays at hand.

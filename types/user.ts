@@ -1,18 +1,6 @@
-export type AvatarId =
-  | "adventurer"
-  | "rogue"
-  | "bard"
-  | "wizard"
-  | "knight"
-  | "gremlin";
-
-export interface AvatarOption {
-  id: AvatarId;
-  emoji: string;
-  label: string;
-}
-
 export interface UserProfile {
   name: string;
-  avatarId: AvatarId;
+  // "" for initials, "preset:<id>" for one of the drawn avatars, or a small
+  // JPEG data URL for an uploaded photo. Stored as-is in members.avatar.
+  avatar: string;
 }

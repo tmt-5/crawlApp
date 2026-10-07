@@ -19,7 +19,6 @@ import {
 } from "../components/ui";
 import { formatDistance, formatKm, formatMinutes, legWalk, routeWalk } from "../lib/geo";
 import { getRoute } from "../lib/routes";
-import { getProfile } from "../lib/storage";
 import { colors } from "../lib/theme";
 import type { CrawlRouteWithStops } from "../types/route";
 
@@ -38,16 +37,11 @@ export default function RouteDetailScreen() {
       .finally(() => setLoading(false));
   }, [routeId]);
 
-  // Picking a route leads to the lobby, where the group gets its name and
-  // code. Someone without a profile enters their name first.
-  const handleChoose = async () => {
+  // Picking a route leads to the lobby, where the group gets its code and
+  // you enter your name.
+  const handleChoose = () => {
     if (!route) return;
-    const profile = await getProfile();
-    if (profile) {
-      router.push({ pathname: "/group-lobby", params: { routeId: route.id } });
-    } else {
-      router.push({ pathname: "/avatar", params: { next: "group-lobby", routeId: route.id } });
-    }
+    router.push({ pathname: "/group-lobby", params: { routeId: route.id } });
   };
 
   if (loading) {

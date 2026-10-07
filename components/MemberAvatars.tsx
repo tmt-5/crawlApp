@@ -1,7 +1,7 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { colors } from "../lib/theme";
 import type { Member } from "../types/group";
-import { initials } from "./CrawlMap.types";
+import Avatar from "./Avatar";
 
 type MemberAvatarsProps = {
   members: Member[];
@@ -9,27 +9,6 @@ type MemberAvatarsProps = {
   // Surface colour behind the stack; each circle is outlined in it.
   surface?: string;
 };
-
-export function Monogram({
-  name,
-  size = 32,
-  surface = colors.cream,
-  overlap = 0,
-}: {
-  name: string;
-  size?: number;
-  surface?: string;
-  overlap?: number;
-}) {
-  return (
-    <View
-      className="items-center justify-center rounded-full bg-ink"
-      style={{ width: size, height: size, borderWidth: 2, borderColor: surface, marginLeft: -overlap }}
-    >
-      <Text className="font-display text-[13px] text-cream">{name}</Text>
-    </View>
-  );
-}
 
 export default function MemberAvatars({ members, max = 5, surface = colors.cream }: MemberAvatarsProps) {
   const shown = members.slice(0, max);
@@ -41,14 +20,15 @@ export default function MemberAvatars({ members, max = 5, surface = colors.cream
       accessibilityLabel={`${members.length} i gruppen: ${members.map((m) => m.name).join(", ")}`}
     >
       {shown.map((member, index) => (
-        <Monogram
+        <Avatar
           key={member.id}
-          name={initials(member.name)}
+          name={member.name}
+          avatar={member.avatar}
           surface={surface}
           overlap={index === 0 ? 0 : 8}
         />
       ))}
-      {hidden > 0 ? <Monogram name={`+${hidden}`} surface={surface} overlap={8} /> : null}
+      {hidden > 0 ? <Avatar name="" text={`+${hidden}`} surface={surface} overlap={8} /> : null}
     </View>
   );
 }
