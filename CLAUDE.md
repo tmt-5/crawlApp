@@ -1,62 +1,136 @@
 @AGENTS.md
 
-# Crawl — "Last Call" UI style
+# Crawl
 
-Build the UI in a retro dive-bar print style: cream paper, hard black borders, offset shadows, chunky slab display type. Looks screen-printed, not glassy. No gradients, no soft shadows, no rounded corners.
+Appen er på norsk (bokmål). All UI-tekst og mikrocopy skrives på norsk, med konkrete eksempler som «Stopp 3 av 5», «9 min gange · Brunnenstr. → Invalidenstr.» og «Sam er 4 min bak». Ingen emoji og ingen utropstegn. Koden og kommentarer kan være på engelsk.
 
-## Color
-- Paper `#f4ece0` (app bg) · Raised paper `#fff8ec` (cards/inputs) · Bar/footer `#eadfcd`
-- Ink `#241d18` (text, all borders) · Ink muted `#8a7a63` · Ink body `#5d5044`
-- Oxblood `#8c2f24` — primary actions, "you are here", live route line
-- Mustard `#d9a026` — highlights, badges, progress, secondary buttons
-- Slate green `#3f6b5f` — avatars only
-- Inverted screens (evening report): bg `#241d18`, text `#f4ece0`, mustard as accent.
+## Visuell stil og designprinsipper
 
-## Type
-- Display: **Alfa Slab One**, always `text-transform: uppercase`, `line-height: 1–1.1`. Screen titles 28–36px, card titles 18–26px, stat numbers 20–26px.
-- UI/body: **DM Sans**. Body 13–16px. Buttons/labels 11–15px `700`, `letter-spacing: .06–.2em`, uppercase.
-- Eyebrow labels: 10–11px, 700, `letter-spacing: .2em`, uppercase, oxblood or muted ink.
-- Numbers-as-data always in Alfa Slab One; never in DM Sans.
+### Designretning
+Appen skal føles som en moderne, interaktiv byguide med uttrykket
+til en analog trykksak. Kombiner varm papirestetikk, kompakt
+redaksjonell typografi og funksjonelle detaljer fra kart og rutetabeller.
 
-## Surfaces & components
-- Card: `background: #fff8ec; border: 3px solid #241d18;` no radius. Emphasis card adds `box-shadow: 5px 5px 0 #241d18` (or `#8c2f24` on dark screens).
-- Placeholder/optional card: `border: 3px dashed #241d18`.
-- Primary button: solid oxblood, cream text, 13–15px 700 uppercase, no radius, full-width in footers.
-- Secondary button: transparent, `3px solid #241d18`, ink text.
-- Small square buttons/icon chips: 34–40px, mustard fill, `3px solid #241d18`, `box-shadow: 3px 3px 0 #241d18`.
-- Chips/filters: selected = ink fill + cream text; unselected = `2px solid #241d18`, transparent.
-- Badges: mustard fill, `3px solid #241d18`, 10px 700 uppercase.
-- List rows: `1px solid rgba(36,29,24,.2)` dividers inside cards; `3px solid #241d18` for structural section splits.
-- Avatars: circles, 26–42px, `2px solid` the surface behind them, overlapped `-8px`, initials 11–14px 700.
-- Stamps (confirmation moments): text in a `4px solid #8c2f24` box, `transform: rotate(-4deg)`, oxblood text.
-- Screen chrome: header block ends with `3px solid #241d18`; footer tab bar on `#eadfcd` with the same 3px top border, labels 11px 700 uppercase `.12em`, active in oxblood, others `opacity .5`.
-- Bottom sheet: `#fff8ec`, 3px ink borders top and bottom, 16–20px padding. No handle, no radius.
-- Imagery: use diagonal striped placeholders until real photos exist — `repeating-linear-gradient(135deg,#e1d3ba 0 10px,#ece0cb 10px 20px)`.
-- Layout: flex/grid with `gap`. Screen padding 20px, card padding 14–18px. Hit targets ≥44px.
+Uttrykket er lokalt, sosialt og uformelt, men strukturert og tydelig.
+Tenk vintage byguide og øletikett — ikke generisk SaaS eller polert
+premium-livsstil.
 
-## The map (the core screen)
-Web is the primary platform: `components/CrawlMap.web.tsx` uses **MapLibre GL JS** (v5 — v6 needs `import.meta`, which Metro doesn't handle) with OpenFreeMap vector tiles and our own minimal light style in `lib/mapStyle.ts` (paper background, raised-paper roads, slate-tinted parks and water, few labels). Attribution is required: a slim 9px strip on translucent cream. Native (`components/CrawlMap.tsx`, react-native-maps) takes the same props from `components/CrawlMap.types.ts` and draws stops and legs, but no live positions yet.
+### Fargepalett
+Bruk en begrenset, varm palett:
 
-Route legs follow the streets: `route_venues.leg_geometry` (plus distance, duration and turn-by-turn `leg_steps`) is precomputed per curated route with `node scripts/compute-route-legs.mjs`, which writes a SQL data migration. Re-run it after changing a route's stops. The app never calls a routing service at runtime; legs without geometry fall back to a straight line.
+- Blekk / mørke flater: `#171511`
+- Lys papirflate: `#F6ECD6`
+- Varm krem / hovedbakgrunn: `#F3E8CF`
+- Mørkere sand / seksjonsbakgrunn: `#DED0AE`
+- Oker / handlingsaksent: `#F4A927`
+- Rødoransje / redaksjonell aksent: `#E84B2C`
+- Sekundær tekst: `#4F493F`
 
-Legs, one feature per leg (the leg arriving at a stop):
-- Casing under every leg: ink, width 9, opacity .18, round caps
-- Walked legs: ink, width 5, opacity .5
-- Current leg (the one the group walks next): oxblood, width 5, solid. On a route preview every leg is current.
-- Upcoming legs: oxblood, width 5, dotted
+La krem- og sandtoner dominere. Bruk mørke flater til navigasjon,
+primære handlingsfelt og avsluttende seksjoner. Oker fremhever
+handlinger, piler og kartmarkører. Rødoransje brukes sparsomt til
+seksjonsetiketter og korte fremhevinger.
 
-Stop pins are DOM markers, circles with `3px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, Alfa Slab One number inside, 44px hit area:
-- done: ink fill, cream `✓`, 30px
-- current: oxblood fill, cream number, 40px, `4px solid #d9a026`
-- upcoming: cream fill, ink number, 30px
+Unngå kjølige gråtoner, store hvite flater og dekorative gradienter.
 
-The current stop (or a tapped one) gets a cream label plate: `2px solid #241d18`, `box-shadow: 2px 2px 0 #241d18`, 11px 700 uppercase, max 140px with ellipsis.
+### Typografi
+Bruk tre tydelige typografiske roller:
 
-People sharing their position (Supabase Realtime Presence, nothing stored) are 32px circles with initials: slate for others, oxblood for you, `2px solid` paper border.
+- **Archivo Narrow Bold:** kompakte, kondenserte overskrifter,
+  fremhevede tall og stedsnavn. Hovedoverskrifter er ofte i versaler,
+  med tett bokstavavstand og linjehøyde rundt 1.0.
+- **Archivo:** brødtekst, korttitler og handlingsetiketter.
+  Brødtekst skal være lettlest, med linjehøyde rundt 1.45.
+- **Cousine Bold:** metadata, kategorier, status, små seksjonsetiketter
+  og kartinformasjon. Bruk gjerne versaler og lett økt bokstavavstand.
 
-Controls: stacked mustard square buttons top-right — zoom in, zoom out, frame the whole route, and "show me" when sharing. Rotation and pitch are off. Maps inside a scrolling page use `mode="embedded"` (two fingers / ctrl+scroll to move); full-screen maps take all gestures.
+Skap hierarki gjennom kontrasten mellom kondenserte overskrifter,
+nøytral brødtekst og monospace-detaljer. Ikke bruk monospace til
+lengre tekst eller versaler på all tekst.
 
-Crawl screen composition: map fills the screen above the sheet, floating cream info card top-left (stop count + route name), controls top-right; a bottom sheet whose visible part has the current bar with a "Sjekk inn" button that opens the sheet, group avatars with the location-sharing chip, and a "Neste: … · N min gange" row. The sheet collapses on moving to the next stop.
+### Layout
+- Design mobile-first med en tydelig vertikal leserekkefølge.
+- Bygg siden av sammenhengende seksjonsbånd i krem og sand.
+- Bruk kompakte, venstrejusterte oppsett med tydelig informasjonsrangering.
+- Hold relaterte opplysninger tett samlet; gi mer luft mellom seksjoner.
+- Referansen bruker omtrent 18 px sidemarg på mobil og 12–16 px
+  mellom elementer innenfor seksjoner.
+- La hero-innhold, kart og utvalgte bilder være mer fremtredende
+  enn sekundære lister og metadata.
+- På større skjermer: behold den redaksjonelle strukturen og
+  kontrollerte tekstbredden fremfor å strekke mobiloppsettet ukritisk.
 
-## Copy
-Straightforward and specific — "Stop 3 of 5", "9 min walk · Brunnenstr. → Invalidenstr.", "Sam is 4 min behind". No hype, no emoji, no exclamation marks.
+### Former og komponenter
+- Bruk rette hjørner som standard; ingen pilleformede knapper.
+- Kort og paneler har tynne, tydelige mørke rammer, vanligvis 1 px.
+- Skill innhold med linjer, rammer og bakgrunnsfarger fremfor skygger.
+- Listekort skal føles som oppføringer i en rutetabell:
+  liten illustrasjon eller kart til venstre, innhold i midten,
+  tydelig handling til høyre.
+- Primære knapper er mørke med lys tekst. Et avgrenset okergult
+  felt med pil kan brukes som et gjennomgående handlingsmotiv.
+- Sekundære knapper og felt har lys papirbakgrunn og mørk ramme.
+- Kategorier og filtre er små, rektangulære etiketter.
+  Valgt tilstand kan inverteres til mørk bakgrunn og lys tekst.
+- Skjemafelt skal være enkle og rammede, ikke flytende eller
+  overdrevent avrundede.
+
+### Bilder, kart og ikoner
+- Bruk varme, dempede bilder med rav-, oker- og bruntoner.
+- Illustrasjoner kan hente uttrykk fra gamle bykart, tresnitt
+  og trykte reiseguider.
+- Kart skal følge papirpaletten, med dempede omgivelser og tydelig
+  rute og stoppmarkører.
+- Bruk enkle strekikoner og retningspiler med konsekvent strektykkelse.
+- Eventuell tekstur skal være subtil og primært ligge i bilder eller
+  illustrasjoner, ikke redusere lesbarheten i UI-et.
+
+### Tone og mikrocopy
+Skriv kort, direkte og vennlig. Språket skal føles som tips fra en
+lokalkjent venn, ikke som markedsføring fra en plattform.
+
+Bruk konkrete handlinger og korte etiketter. Personlighet kan komme
+gjennom små redaksjonelle overskrifter, men navigasjon og viktig
+informasjon skal alltid være entydig.
+
+### Produksjonskrav
+Bevar estetikken uten å kopiere referansens minste tekststørrelser
+ukritisk. Prioriter lesbarhet, god kontrast og store nok trykkflater.
+
+- Sikt mot minst 44 × 44 px for berøringsmål.
+- Bruk tydelige fokus-, valgt- og feiltilstander.
+- Ikke kommuniser status med farge alene.
+- Bruk delte designtokens og gjenbrukbare komponenter for konsistens.
+
+### Unngå
+Glassmorfisme, myke flytende kort, store hjørneradier, diffuse
+skygger, neonfarger, overdreven animasjon og generiske dashboard-mønstre.
+
+Ved tvil: velg det enklere, flatere og mer trykksak-lignende
+alternativet — men aldri på bekostning av brukervennlighet.
+
+## Kartet (kjerneskjermen)
+Web er hovedplattformen. `components/CrawlMap.web.tsx` bruker **MapLibre GL JS** (v5 — v6 krever `import.meta`, som Metro ikke håndterer) med OpenFreeMap-vektorfliser og vår egen minimale lyse stil i `lib/mapStyle.ts`. Stilen følger papirpaletten: krem bakgrunn, lys papirfarge på veier, dempede sand- og grønntoner på parker og vann, få stedsnavn. Attribusjon er påkrevd: en tynn 9px stripe på halvgjennomsiktig krem. Native (`components/CrawlMap.tsx`, react-native-maps) tar de samme propsene fra `components/CrawlMap.types.ts` og tegner stopp og etapper, men har ingen live posisjoner ennå.
+
+Etappene følger gatene: `route_venues.leg_geometry` (pluss distanse, varighet og tur-for-tur i `leg_steps`) beregnes på forhånd per kuratert rute med `node scripts/compute-route-legs.mjs`, som skriver en SQL-datamigrasjon. Kjør skriptet på nytt etter at stoppene i en rute er endret. Appen kaller aldri en rutetjeneste mens den kjører. Etapper uten geometri faller tilbake til en rett linje.
+
+Etapper, én feature per etappe (etappen som kommer til et stopp):
+- Kantlinje under hver etappe: blekk `#171511`, bredde 9, opacity .18, runde ender
+- Gåtte etapper: blekk, bredde 5, opacity .5
+- Nåværende etappe (den gruppa går neste): rødoransje `#E84B2C`, bredde 5, heltrukket. I rutevisning er alle etapper nåværende.
+- Kommende etapper: rødoransje, bredde 5, prikket
+
+Stopp-pins er DOM-markører. De er kvadratiske eller runde, har 2px blekkramme uten skygge, tall i Archivo Narrow Bold og et berøringsmål på 44px:
+- ferdig: blekkfyll, lys `✓`, 30px
+- nåværende: okerfyll, blekktall, 40px, 3px blekkramme
+- kommende: papirfyll, blekktall, 30px
+
+Status skal ikke vises med farge alene: ferdig har hake, nåværende er størst og har tykkere ramme, kommende har bare tall.
+
+Nåværende stopp (eller et trykket stopp) får en etikett: papirflate `#F6ECD6`, 1px blekkramme, Cousine Bold 11px versaler, maks 140px med ellipsis.
+
+Folk som deler posisjonen sin (Supabase Realtime Presence, ingenting lagres) vises som 32px sirkler med initialer, Archivo Bold. Andre har blekkfyll og lys tekst, du har okerfyll og blekktekst. Begge har 2px papirkant.
+
+Kontroller: stablede kvadratiske okerknapper øverst til høyre med 1px blekkramme, minst 44px — zoom inn, zoom ut, vis hele ruta og «Vis meg» når du deler posisjon. Rotasjon og pitch er av. Kart inne i en side som scroller bruker `mode="embedded"` (to fingre / ctrl+scroll for å flytte). Kart i fullskjerm tar alle gester.
+
+Crawl-skjermen: kartet fyller skjermen over sheeten. Et flytende infokort øverst til venstre viser stoppnummer og rutenavn, kontrollene ligger øverst til høyre. Den synlige delen av sheeten har en linje for nåværende stopp med «Sjekk inn»-knapp som åpner sheeten, gruppeavatarer med chip for posisjonsdeling og en «Neste: … · N min gange»-rad. Sheeten lukkes når gruppa går videre til neste stopp.
