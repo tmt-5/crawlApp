@@ -6,6 +6,7 @@ import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
 import { legPath } from "../lib/geo";
 import { MAP_STYLE } from "../lib/mapStyle";
+import { colors, fonts, hardShadow } from "../lib/theme";
 import type { LngLat } from "../types/route";
 import {
   initials,
@@ -15,17 +16,13 @@ import {
   type MapPerson,
   type StopStatus,
 } from "./CrawlMap.types";
+import Icon, { type IconName } from "./Icon";
 
-const INK = "#241d18";
-const PAPER = "#f4ece0";
-const RAISED = "#fff8ec";
-const OXBLOOD = "#8c2f24";
-const MUSTARD = "#d9a026";
-const SLATE = "#3f6b5f";
+const { ink: INK, paper: PAPER, cream: CREAM, ochre: OCHRE, red: RED } = colors;
 
 const OSLO: LngLat = [10.7522, 59.9139];
 const HIT_SIZE = 44;
-const CONTROLS_WIDTH = 52;
+const CONTROLS_WIDTH = 56;
 const MAX_FRAME_ZOOM = 16.5;
 
 const LOCALE = {
@@ -41,6 +38,7 @@ export default function CrawlMap({
   mode = "full",
   framePadding,
   controlsTop = 12,
+  showControls = true,
 }: CrawlMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -202,34 +200,32 @@ export default function CrawlMap({
   const me = people.find((person) => person.isMe);
 
   return (
-    <View style={{ flex: 1, backgroundColor: PAPER }}>
-      <div ref={containerRef} className="crawl-map" style={{ position: "absolute", inset: 0 }} />
-      <View style={{ position: "absolute", top: controlsTop, right: 12, gap: 8 }}>
-        <MapButton label="Zoom inn" onPress={() => mapRef.current?.zoomIn()}>
-          <Bar horizontal />
-          <Bar />
-        </MapButton>
-        <MapButton label="Zoom ut" onPress={() => mapRef.current?.zoomOut()}>
-          <Bar horizontal />
-        </MapButton>
-        <MapButton label="Vis hele ruten" onPress={() => frameRoute(true)}>
-          <FrameIcon />
-        </MapButton>
-        {me ? (
-          <MapButton
-            label="Vis meg"
-            onPress={() =>
-              mapRef.current?.easeTo({
-                center: [me.longitude, me.latitude],
-                zoom: Math.max(mapRef.current.getZoom(), 16),
-                duration: 600,
-              })
-            }
-          >
-            <View className="h-3 w-3 rounded-full border-2 border-ink bg-oxblood" />
-          </MapButton>
-        ) : null}
-      </View>
+    <View style={{ flex: 1, backgroundColor: CREAM }}>
+      <div
+        ref={containerRef}
+        className={mode === "full" ? "crawl-map crawl-map--full" : "crawl-map"}
+        style={{ position: "absolute", inset: 0 }}
+      />
+      {showControls ? (
+        <View style={{ position: "absolute", top: controlsTop, right: 16, gap: 8 }}>
+          <MapButton icon="plus" label="Zoom inn" onPress={() => mapRef.current?.zoomIn()} />
+          <MapButton icon="minus" label="Zoom ut" onPress={() => mapRef.current?.zoomOut()} />
+          <MapButton icon="maximize" label="Vis hele ruten" onPress={() => frameRoute(true)} />
+          {me ? (
+            <MapButton
+              icon="navigation"
+              label="Vis meg"
+              onPress={() =>
+                mapRef.current?.easeTo({
+                  center: [me.longitude, me.latitude],
+                  zoom: Math.max(mapRef.current.getZoom(), 16),
+                  duration: 600,
+                })
+              }
+            />
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -258,7 +254,7 @@ function addRouteLayers(map: MapLibreMap) {
     source: "legs",
     filter: ["==", ["get", "status"], "upcoming"],
     layout,
-    paint: { "line-color": OXBLOOD, "line-width": 5, "line-dasharray": [0.4, 1.8] },
+    paint: { "line-color": RED, "line-width": 5, "line-dasharray": [0.4, 1.8] },
   });
   map.addLayer({
     id: "legs-current",
@@ -266,7 +262,7 @@ function addRouteLayers(map: MapLibreMap) {
     source: "legs",
     filter: ["==", ["get", "status"], "current"],
     layout,
-    paint: { "line-color": OXBLOOD, "line-width": 5 },
+    paint: { "line-color": RED, "line-width": 5 },
   });
 }
 
@@ -292,15 +288,14 @@ function stopElement(
     height: `${size}px`,
     boxSizing: "border-box",
     borderRadius: "50%",
-    border: status === "current" ? `4px solid ${MUSTARD}` : `3px solid ${INK}`,
-    background: status === "done" ? INK : status === "current" ? OXBLOOD : RAISED,
-    color: status === "upcoming" ? INK : RAISED,
-    boxShadow: `2px 2px 0 ${INK}`,
+    border: `${status === "current" ? 3 : 2}px solid ${INK}`,
+    background: status === "done" ? INK : status === "current" ? OCHRE : PAPER,
+    color: status === "done" ? PAPER : INK,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: status === "done" ? "DMSans_700Bold" : "AlfaSlabOne_400Regular",
-    fontSize: status === "current" ? "16px" : "12px",
+    fontFamily: fonts.display,
+    fontSize: status === "current" ? "22px" : "15px",
     lineHeight: "1",
   });
   pin.textContent = status === "done" ? "✓" : String(number);
@@ -317,13 +312,13 @@ function stopElement(
       maxWidth: "140px",
       overflow: "hidden",
       textOverflow: "ellipsis",
-      background: RAISED,
-      border: `2px solid ${INK}`,
-      boxShadow: `2px 2px 0 ${INK}`,
-      padding: "3px 7px",
-      fontFamily: "DMSans_700Bold",
+      background: PAPER,
+      border: `1px solid ${INK}`,
+      padding: "5px 7px",
+      fontFamily: fonts.mono,
       fontSize: "11px",
-      letterSpacing: "0.08em",
+      lineHeight: "1.1",
+      letterSpacing: "0.04em",
       textTransform: "uppercase",
       color: INK,
       pointerEvents: "none",
@@ -347,13 +342,12 @@ function personElement(person: MapPerson): HTMLElement {
     boxSizing: "border-box",
     borderRadius: "50%",
     border: `2px solid ${PAPER}`,
-    background: person.isMe ? OXBLOOD : SLATE,
-    boxShadow: `2px 2px 0 ${INK}`,
-    color: PAPER,
+    background: person.isMe ? OCHRE : INK,
+    color: person.isMe ? INK : PAPER,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: "DMSans_700Bold",
+    fontFamily: fonts.bodyBold,
     fontSize: "12px",
     zIndex: person.isMe ? "5" : "4",
   });
@@ -363,50 +357,23 @@ function personElement(person: MapPerson): HTMLElement {
 }
 
 function MapButton({
+  icon,
   label,
   onPress,
-  children,
 }: {
+  icon: IconName;
   label: string;
   onPress: () => void;
-  children: React.ReactNode;
 }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="h-10 w-10 items-center justify-center border-[3px] border-ink bg-mustard active:opacity-80"
-      style={{
-        shadowColor: INK,
-        shadowOffset: { width: 3, height: 3 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-      }}
+      className="h-11 w-11 items-center justify-center border border-ink bg-ochre active:opacity-85"
+      style={hardShadow}
     >
-      {children}
+      <Icon name={icon} size={20} />
     </Pressable>
-  );
-}
-
-function Bar({ horizontal }: { horizontal?: boolean }) {
-  return (
-    <View
-      className="absolute bg-ink"
-      style={horizontal ? { width: 14, height: 3 } : { width: 3, height: 14 }}
-    />
-  );
-}
-
-// Four corner brackets: "fit everything in view".
-function FrameIcon() {
-  const corner = { position: "absolute" as const, width: 6, height: 6, borderColor: INK };
-  return (
-    <View style={{ width: 16, height: 16 }}>
-      <View style={{ ...corner, top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3 }} />
-      <View style={{ ...corner, top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3 }} />
-      <View style={{ ...corner, bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3 }} />
-      <View style={{ ...corner, bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 }} />
-    </View>
   );
 }

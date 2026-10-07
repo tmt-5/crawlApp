@@ -43,18 +43,16 @@ export default function RatingSlider({ label, value, onChange }: RatingSliderPro
   const percent = value !== null ? (value / STEPS) * 100 : 0;
 
   return (
-    <View className="gap-2">
+    <View className="gap-1 py-1.5" accessibilityLabel={`${label}: ${value ?? "ikke vurdert"} av ${STEPS}`}>
       <View className="flex-row items-center justify-between">
-        <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-          {label}
-        </Text>
-        <Text className="font-display text-xl text-ink">
+        <Text className="font-mono text-[11px] uppercase tracking-[.04em] text-ink">{label}</Text>
+        <Text className="font-display text-[18px] text-ink" style={{ lineHeight: 20 }}>
           {value !== null ? value : "–"}
         </Text>
       </View>
 
       <View
-        className="justify-center py-3"
+        className="justify-center py-4"
         {...panResponder.panHandlers}
         onLayout={() => {
           trackRef.current?.measure((_fx, _fy, width, _height, pageX) => {
@@ -63,35 +61,24 @@ export default function RatingSlider({ label, value, onChange }: RatingSliderPro
           });
         }}
       >
-        <View ref={trackRef} className="h-3.5 justify-center border-[3px] border-ink bg-paper-raised">
+        <View ref={trackRef} className="h-2.5 justify-center border-[1.5px] border-ink bg-paper-light">
           <View
-            className="absolute bottom-0 left-0 top-0 bg-mustard"
+            className="absolute bottom-0 left-0 top-0 bg-ochre"
             style={{ width: `${percent}%` }}
           />
         </View>
         {value !== null ? (
           <View
             pointerEvents="none"
-            className="absolute h-6 w-6 border-[3px] border-ink bg-mustard"
-            style={{
-              left: `${percent}%`,
-              marginLeft: -12,
-              shadowColor: "#241d18",
-              shadowOffset: { width: 2, height: 2 },
-              shadowOpacity: dragging ? 0 : 1,
-              shadowRadius: 0,
-              elevation: dragging ? 0 : 2,
-            }}
+            className={`absolute h-6 w-6 border-[1.5px] border-ink ${dragging ? "bg-ink" : "bg-ochre"}`}
+            style={{ left: `${percent}%`, marginLeft: -12 }}
           />
         ) : null}
       </View>
 
-      <View className="flex-row justify-between px-0.5">
+      <View className="flex-row justify-between">
         {Array.from({ length: STEPS + 1 }, (_, tick) => (
-          <View
-            key={tick}
-            className={value === tick ? "h-2 w-[3px] bg-oxblood" : "h-1.5 w-[2px] bg-ink/30"}
-          />
+          <View key={tick} className={value === tick ? "h-2 w-[2px] bg-ink" : "h-1 w-px bg-tick"} />
         ))}
       </View>
     </View>

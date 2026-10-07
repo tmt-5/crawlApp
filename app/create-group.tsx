@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import Button from "../components/Button";
-import RouteStrip from "../components/RouteStrip";
+import RouteCard from "../components/RouteCard";
+import { Band, ErrorText, Field, Footer, Heading, Kicker, Masthead } from "../components/ui";
 import { createGroup } from "../lib/groups";
 import { getRoute } from "../lib/routes";
 import { getProfile, saveMembership } from "../lib/storage";
@@ -55,57 +56,42 @@ export default function CreateGroupScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <View className="flex-1 px-5">
-        <View className="flex-1 gap-8 pt-8">
-          <Text
-            className="font-display text-center text-3xl uppercase text-ink"
-            style={{ lineHeight: 34 }}
-          >
-            Opprett gruppe
-          </Text>
+    <View className="flex-1 bg-cream">
+      <StatusBar style="light" />
+      <Masthead label="Ny gruppe" />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <Band divider={false} className="gap-6 pb-8 pt-5">
+          <View className="gap-1">
+            <Kicker>Samle gjengen</Kicker>
+            <Heading size={36}>Opprett gruppe</Heading>
+          </View>
+
+          <Field
+            label="Gruppenavn"
+            value={name}
+            onChangeText={setName}
+            placeholder="F.eks. Fredagsgjengen"
+            hint="Du får en kode som resten av gjengen bruker for å bli med."
+          />
 
           {route ? (
-            <View className="gap-3 border-[3px] border-ink bg-paper-raised px-4 py-4">
-              <View className="gap-0.5">
-                <Text className="font-body-bold text-[10px] uppercase tracking-[.2em] text-ink-muted">
-                  Valgt rute
-                </Text>
-                <Text className="font-display text-xl uppercase text-ink">{route.name}</Text>
-              </View>
-              <RouteStrip count={route.stops.length} />
+            <View className="gap-2">
+              <Kicker tone="ink">Valgt rute</Kicker>
+              <RouteCard route={route} />
             </View>
           ) : null}
 
-          <View className="gap-2">
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Gruppenavn
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="F.eks. Fredagsgjengen"
-              placeholderTextColor="#8a7a63"
-              className="border-[3px] border-ink bg-paper-raised px-4 py-3 font-body text-base text-ink"
-            />
-            <Text className="text-xs leading-4 text-ink-muted">
-              Du får en kode som resten av gjengen bruker for å bli med.
-            </Text>
-          </View>
+          {error ? <ErrorText>{error}</ErrorText> : null}
+        </Band>
+      </ScrollView>
 
-          {error ? (
-            <Text className="font-body-bold text-sm text-oxblood">{error}</Text>
-          ) : null}
-        </View>
-
-        <View className="pb-10">
-          <Button
-            label={saving ? "Oppretter…" : "Opprett og få kode"}
-            onPress={handleConfirm}
-            disabled={!canConfirm || saving}
-          />
-        </View>
-      </View>
-    </SafeAreaView>
+      <Footer>
+        <Button
+          label={saving ? "Oppretter…" : "Opprett og få kode"}
+          onPress={handleConfirm}
+          disabled={!canConfirm || saving}
+        />
+      </Footer>
+    </View>
   );
 }

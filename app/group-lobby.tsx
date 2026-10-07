@@ -1,24 +1,29 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import Button from "../components/Button";
-import RouteStrip from "../components/RouteStrip";
+import { Monogram } from "../components/MemberAvatars";
+import { initials } from "../components/CrawlMap.types";
+import RouteCard from "../components/RouteCard";
+import {
+  ActionBar,
+  Band,
+  Body,
+  ErrorText,
+  Footer,
+  Heading,
+  Kicker,
+  Masthead,
+  StampButton,
+} from "../components/ui";
 import { AVATAR_OPTIONS } from "../lib/avatars";
-import { formatKm, routeWalk } from "../lib/geo";
 import { getGroup, getMembers, startCrawl } from "../lib/groups";
 import { shareInvite } from "../lib/invite";
 import { getRoute } from "../lib/routes";
+import { colors } from "../lib/theme";
 import type { Group, Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
-
-const squareShadow = {
-  shadowColor: "#241d18",
-  shadowOffset: { width: 3, height: 3 },
-  shadowOpacity: 1,
-  shadowRadius: 0,
-  elevation: 3,
-};
 
 export default function GroupLobbyScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -92,132 +97,104 @@ export default function GroupLobbyScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#8c2f24" />
-      </SafeAreaView>
+      <View className="flex-1 items-center justify-center bg-cream">
+        <ActivityIndicator color={colors.ink} />
+      </View>
     );
   }
 
-  const meters = route ? routeWalk(route.stops).meters : 0;
+  const status =
+    group?.status === "completed"
+      ? "Crawlen er fullført"
+      : group?.status === "active"
+        ? "Crawlen pågår"
+        : "Lobby";
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={{ gap: 24, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24 }}>
-        <View className="flex-row items-start justify-between gap-3">
-          <Pressable
-            onPress={() => router.replace("/")}
-            hitSlop={8}
-            className="h-10 w-10 items-center justify-center border-[3px] border-ink bg-mustard"
-            style={squareShadow}
-          >
-            <Text className="font-body-bold text-base text-ink">←</Text>
-          </Pressable>
+    <View className="flex-1 bg-cream">
+      <StatusBar style="light" />
+      <Masthead
+        label={status}
+        onBack={() => router.replace("/")}
+        right={
           <Pressable
             onPress={handleRefresh}
-            hitSlop={8}
-            className="h-10 w-10 items-center justify-center border-[3px] border-ink bg-mustard"
-            style={squareShadow}
+            accessibilityRole="button"
+            className="min-h-[44px] justify-center border border-paper-light px-3 active:opacity-80"
           >
-            <Text className="font-body-bold text-base text-ink">{refreshing ? "…" : "↻"}</Text>
+            <Kicker tone="light">{refreshing ? "Henter…" : "Oppdater"}</Kicker>
           </Pressable>
-        </View>
+        }
+      />
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <Band divider={false} className="gap-4 pb-7 pt-5">
+          <View className="gap-1">
+            <Kicker>Gruppe</Kicker>
+            <Heading size={36}>{group?.name ?? "Gruppe"}</Heading>
+          </View>
 
-        <View className="gap-1">
-          <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-            {group?.status === "completed"
-              ? "Crawlen er fullført"
-              : group?.status === "active"
-                ? "Crawlen pågår"
-                : "Lobby"}
-          </Text>
-          <Text className="font-display text-3xl uppercase text-ink" style={{ lineHeight: 34 }}>
-            {group?.name ?? "Gruppe"}
-          </Text>
-        </View>
-
-        {route ? (
-          <Pressable
-            onPress={() => router.push({ pathname: "/route-detail", params: { routeId: route.id } })}
-            className="gap-3 border-[3px] border-ink bg-paper-raised px-4 py-4 active:opacity-90"
-            style={{ ...squareShadow, shadowOffset: { width: 5, height: 5 }, elevation: 5 }}
-          >
-            <View className="flex-row items-start justify-between gap-3">
-              <View className="flex-1 gap-0.5">
-                <Text className="font-body-bold text-[10px] uppercase tracking-[.2em] text-ink-muted">
-                  Kveldens rute{route.neighborhood ? ` · ${route.neighborhood}` : ""}
-                </Text>
-                <Text className="font-display text-xl uppercase text-ink">{route.name}</Text>
-              </View>
-              <Text className="font-body-bold pt-1 text-[11px] uppercase tracking-[.12em] text-oxblood">
-                Se →
+          <View className="flex-row items-center gap-3 border-[1.5px] border-ink bg-paper px-3.5 py-3">
+            <View className="flex-1 gap-0.5">
+              <Kicker tone="soft">Kode</Kicker>
+              <Text className="font-display text-[30px] text-ink" style={{ letterSpacing: 3 }}>
+                {group?.invite_code}
               </Text>
             </View>
-            <RouteStrip count={route.stops.length} />
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.12em] text-ink-muted">
-              {route.stops.length} stopp{meters > 0 ? ` · ca. ${formatKm(meters)} km gange` : ""}
-            </Text>
-          </Pressable>
-        ) : (
-          <View className="gap-3 border-[3px] border-dashed border-ink px-4 py-4">
-            <Text className="text-sm text-ink-body">Gruppen har ingen rute.</Text>
-            <Button label="Utforsk ruter" variant="secondary" onPress={() => router.replace("/")} />
+            <StampButton label={copied ? "Kopiert" : "Del"} onPress={handleShare} />
           </View>
-        )}
+        </Band>
 
-        <View className="flex-row items-center gap-3 border-[3px] border-ink bg-paper-raised px-4 py-3">
-          <View className="flex-1 gap-0.5">
-            <Text className="font-body-bold text-[10px] uppercase tracking-[.2em] text-ink-muted">
-              Kode
-            </Text>
-            <Text className="font-display text-2xl uppercase text-oxblood" style={{ letterSpacing: 3 }}>
-              {group?.invite_code}
-            </Text>
+        <Band tone="sand" className="gap-3.5 pb-7 pt-6">
+          <View className="gap-0.5">
+            <Kicker>Kveldens rute</Kicker>
+            <Heading size={26}>{route ? "Hit skal dere" : "Ingen rute valgt"}</Heading>
           </View>
-          <Pressable
-            onPress={handleShare}
-            className="min-h-[44px] justify-center border-[3px] border-ink bg-mustard px-4"
-            style={squareShadow}
-          >
-            <Text className="font-body-bold text-xs uppercase tracking-[.12em] text-ink">
-              {copied ? "Kopiert" : "Del"}
-            </Text>
-          </Pressable>
-        </View>
+          {route ? (
+            <RouteCard route={route} />
+          ) : (
+            <>
+              <Body>Gruppen har ingen rute ennå.</Body>
+              <Button label="Utforsk ruter" variant="secondary" onPress={() => router.replace("/")} />
+            </>
+          )}
+        </Band>
 
-        <View className="gap-2">
-          <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-            Gjengen ({members.length})
-          </Text>
-          <View className="border-[3px] border-ink bg-paper-raised">
-            {members.length === 0 ? (
-              <Text className="px-4 py-4 text-center text-base text-ink-body">
-                Ingen har blitt med enda.
-              </Text>
-            ) : (
-              members.map((member, index) => {
-                const avatar = AVATAR_OPTIONS.find((option) => option.id === member.avatar);
-                return (
-                  <View
-                    key={member.id}
-                    className={`flex-row items-center gap-3 px-4 py-3 ${
-                      index > 0 ? "border-t border-ink/20" : ""
-                    }`}
-                  >
-                    <View className="h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-slate">
-                      <Text className="text-base">{avatar?.emoji ?? "🍺"}</Text>
+        <View className="flex-1 bg-cream">
+          <Band className="gap-3.5 pb-8 pt-6">
+            <View className="gap-0.5">
+              <Kicker>Hvem blir med</Kicker>
+              <Heading size={26}>Gjengen ({members.length})</Heading>
+            </View>
+            <View className="border-[1.5px] border-ink bg-paper">
+              {members.length === 0 ? (
+                <Body className="px-3.5 py-4">Ingen har blitt med ennå.</Body>
+              ) : (
+                members.map((member, index) => {
+                  const role = AVATAR_OPTIONS.find((option) => option.id === member.avatar);
+                  return (
+                    <View
+                      key={member.id}
+                      className={`min-h-[52px] flex-row items-center gap-3 px-3.5 py-2.5 ${
+                        index > 0 ? "border-t border-ink" : ""
+                      }`}
+                    >
+                      <Monogram name={initials(member.name)} surface={colors.paper} />
+                      <Text className="flex-1 font-body-bold text-[16px] text-ink" numberOfLines={1}>
+                        {member.name}
+                      </Text>
+                      {role ? <Kicker tone="soft">{role.label}</Kicker> : null}
                     </View>
-                    <Text className="font-body-bold text-base text-ink">{member.name}</Text>
-                  </View>
-                );
-              })
-            )}
-          </View>
+                  );
+                })
+              )}
+            </View>
+          </Band>
         </View>
       </ScrollView>
 
-      <View className="gap-2 border-t-[3px] border-ink bg-bar px-5 pb-4 pt-4">
-        {error ? <Text className="font-body-bold text-sm text-oxblood">{error}</Text> : null}
-        <Button
+      <Footer>
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <ActionBar
           label={
             starting
               ? "Starter…"
@@ -233,7 +210,7 @@ export default function GroupLobbyScreen() {
           onPress={handleStart}
           disabled={!route || starting}
         />
-      </View>
-    </SafeAreaView>
+      </Footer>
+    </View>
   );
 }

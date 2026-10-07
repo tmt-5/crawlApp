@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import Button from "../components/Button";
+import { Band, Body, ErrorText, Field, Footer, Heading, Kicker, Masthead } from "../components/ui";
 import { joinGroupByCode } from "../lib/groups";
 import { getProfile, saveMembership } from "../lib/storage";
 
@@ -59,43 +60,38 @@ export default function JoinGroupScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <View className="flex-1 px-5">
-        <View className="flex-1 gap-8 pt-8">
-          <Text
-            className="font-display text-center text-3xl uppercase text-ink"
-            style={{ lineHeight: 34 }}
-          >
-            Bli med i gruppe
-          </Text>
-
+    <View className="flex-1 bg-cream">
+      <StatusBar style="light" />
+      <Masthead label="Har kode" />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <Band divider={false} className="gap-6 pb-8 pt-5">
           <View className="gap-2">
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Invitasjonskode
-            </Text>
-            <TextInput
-              value={code}
-              onChangeText={(text) => setCode(text.toUpperCase())}
-              placeholder="F.eks. AB3F9K"
-              placeholderTextColor="#8a7a63"
-              autoCapitalize="characters"
-              className="border-[3px] border-ink bg-paper-raised px-4 py-3 font-body text-base uppercase tracking-[.15em] text-ink"
-            />
+            <Kicker>Gjengen venter</Kicker>
+            <Heading size={36}>Bli med i gruppe</Heading>
+            <Body>Skriv inn koden du har fått, så havner du rett i lobbyen.</Body>
           </View>
 
-          {error ? (
-            <Text className="font-body-bold text-sm text-oxblood">{error}</Text>
-          ) : null}
-        </View>
-
-        <View className="pb-10">
-          <Button
-            label={saving ? "Blir med…" : "Bli med"}
-            onPress={handleConfirm}
-            disabled={!canConfirm || saving}
+          <Field
+            label="Invitasjonskode"
+            value={code}
+            onChangeText={(text) => setCode(text.toUpperCase())}
+            placeholder="F.eks. AB3F9K"
+            autoCapitalize="characters"
+            autoCorrect={false}
+            className="font-mono tracking-[.15em]"
           />
-        </View>
-      </View>
-    </SafeAreaView>
+
+          {error ? <ErrorText>{error}</ErrorText> : null}
+        </Band>
+      </ScrollView>
+
+      <Footer>
+        <Button
+          label={saving ? "Blir med…" : "Bli med"}
+          onPress={handleConfirm}
+          disabled={!canConfirm || saving}
+        />
+      </Footer>
+    </View>
   );
 }

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Button from "../components/Button";
+import { StatusBar } from "expo-status-bar";
 import AvatarGrid from "../components/AvatarGrid";
+import Button from "../components/Button";
+import { Band, Field, Footer, Heading, Kicker, Masthead } from "../components/ui";
 import { AVATAR_OPTIONS } from "../lib/avatars";
 import { saveProfile } from "../lib/storage";
 import type { AvatarId } from "../types/user";
@@ -43,49 +44,33 @@ export default function AvatarScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <View className="flex-1 px-5">
-        <View className="flex-1 gap-8 pt-8">
-          <Text
-            className="font-display text-center text-3xl uppercase text-ink"
-            style={{ lineHeight: 34 }}
-          >
-            Hvem er du{"\n"}i kveld?
-          </Text>
-
-          <View className="gap-2">
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Navn
-            </Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Skriv navnet ditt"
-              placeholderTextColor="#8a7a63"
-              className="border-[3px] border-ink bg-paper-raised px-4 py-3 font-body text-base text-ink"
-            />
+    <View className="flex-1 bg-cream">
+      <StatusBar style="light" />
+      <Masthead label="Profil" />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <Band divider={false} className="gap-6 pb-8 pt-5">
+          <View className="gap-1">
+            <Kicker>Før vi går</Kicker>
+            <Heading size={36}>Hvem er du{"\n"}i kveld?</Heading>
           </View>
 
-          <View className="gap-2">
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Velg avatar
-            </Text>
-            <AvatarGrid
-              options={AVATAR_OPTIONS}
-              selectedId={avatarId}
-              onSelect={setAvatarId}
-            />
-          </View>
-        </View>
-
-        <View className="pb-10">
-          <Button
-            label="Bekreft"
-            onPress={handleConfirm}
-            disabled={!canConfirm || saving}
+          <Field
+            label="Navn"
+            value={name}
+            onChangeText={setName}
+            placeholder="Skriv navnet ditt"
           />
-        </View>
-      </View>
-    </SafeAreaView>
+
+          <View className="gap-2">
+            <Kicker tone="ink">Velg rolle</Kicker>
+            <AvatarGrid options={AVATAR_OPTIONS} selectedId={avatarId} onSelect={setAvatarId} />
+          </View>
+        </Band>
+      </ScrollView>
+
+      <Footer>
+        <Button label="Bekreft" onPress={handleConfirm} disabled={!canConfirm || saving} />
+      </Footer>
+    </View>
   );
 }

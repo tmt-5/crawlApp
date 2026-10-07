@@ -1,13 +1,14 @@
 import type { ExpressionSpecification, StyleSpecification } from "maplibre-gl";
 
-// Minimal light basemap in the "Last Call" palette, drawn from OpenFreeMap's
+// Minimal light basemap in the paper palette, drawn from OpenFreeMap's
 // OpenMapTiles vector tiles. Everything that isn't needed to find your way
 // between bars (shops, transit stops, most labels) is left out.
 
-const PAPER = "#f4ece0";
-const RAISED = "#fff8ec";
-const INK_MUTED = "#8a7a63";
-const SLATE = "#3f6b5f";
+// Slightly greyer than the page cream so the light streets stand out.
+const PAPER = "#E9E1CE";
+const RAISED = "#FBF4E2";
+const INK_MUTED = "#68604F";
+const SLATE = "#5F6F56";
 
 const TILES = "https://tiles.openfreemap.org/planet";
 const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
@@ -51,7 +52,7 @@ export const MAP_STYLE: StyleSpecification = {
       source: "openmaptiles",
       "source-layer": "water",
       filter: ["!=", ["get", "brunnel"], "tunnel"],
-      paint: { "fill-color": "#cdd6cc" },
+      paint: { "fill-color": "#C9D1C2" },
     },
     {
       id: "building",
@@ -60,8 +61,8 @@ export const MAP_STYLE: StyleSpecification = {
       "source-layer": "building",
       minzoom: 14,
       paint: {
-        "fill-color": "#ebe1cf",
-        "fill-outline-color": "#e1d3ba",
+        "fill-color": "#DED4BC",
+        "fill-outline-color": "#CFC3A6",
         "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0, 15.5, 1],
       },
     },
@@ -72,7 +73,7 @@ export const MAP_STYLE: StyleSpecification = {
       "source-layer": "transportation",
       minzoom: 13,
       filter: ["all", ["match", ["get", "class"], ["rail", "transit"], true, false], ["!=", ["get", "brunnel"], "tunnel"]],
-      paint: { "line-color": "#d6c8af", "line-width": 1, "line-dasharray": [3, 3] },
+      paint: { "line-color": "#CFC3A6", "line-width": 1, "line-dasharray": [3, 3] },
     },
     {
       id: "path",
@@ -100,7 +101,7 @@ export const MAP_STYLE: StyleSpecification = {
       "source-layer": "transportation",
       filter: ["all", ["match", ["get", "class"], MAJOR_ROADS, true, false], ["!=", ["get", "brunnel"], "tunnel"]],
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#e1d3ba", "line-width": zoomWidth([[11, 1.5], [16, 11], [19, 28]]) },
+      paint: { "line-color": "#D8CDB2", "line-width": zoomWidth([[11, 1.5], [16, 11], [19, 28]]) },
     },
     {
       id: "road-major",

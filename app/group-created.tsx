@@ -1,11 +1,14 @@
 import { useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { Platform, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "../components/Button";
+import { ActionBar, Band, Body, Footer, Heading, Kicker } from "../components/ui";
 import { shareInvite } from "../lib/invite";
 
 export default function GroupCreatedScreen() {
+  const insets = useSafeAreaInsets();
   const { groupId, name, inviteCode, routeName } = useLocalSearchParams<{
     groupId: string;
     name: string;
@@ -24,59 +27,45 @@ export default function GroupCreatedScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <View className="flex-1 px-5">
-        <View className="flex-1 items-center justify-center gap-10">
-          <View className="items-center gap-2">
-            <Text className="font-body-bold text-xs uppercase tracking-[.2em] text-oxblood">
-              Gruppen er opprettet
-            </Text>
-            <Text className="font-display text-center text-2xl uppercase text-ink">
-              {name}
-            </Text>
-            {routeName ? (
-              <Text className="font-body-bold text-center text-[11px] uppercase tracking-[.12em] text-ink-muted">
-                Rute: {routeName}
-              </Text>
-            ) : null}
+    <View className="flex-1 bg-cream" style={{ paddingTop: insets.top }}>
+      <StatusBar style="dark" />
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
+        <Band divider={false} className="gap-7 py-10">
+          <View className="gap-2">
+            <Kicker>Gruppen er opprettet</Kicker>
+            <Heading size={40}>{name}</Heading>
+            {routeName ? <Kicker tone="soft">Rute: {routeName}</Kicker> : null}
           </View>
 
           <View
-            className="items-center gap-1 border-4 border-oxblood px-10 py-6"
-            style={{ transform: [{ rotate: "-4deg" }] }}
+            className="items-center gap-1 self-center border-2 border-red px-10 py-5"
+            style={{ transform: [{ rotate: "-3deg" }] }}
           >
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              Kode
-            </Text>
-            <Text
-              className="font-display text-5xl uppercase text-oxblood"
-              style={{ letterSpacing: 4 }}
-            >
+            <Kicker>Kode</Kicker>
+            <Text className="font-display text-[52px] text-red" style={{ letterSpacing: 4, lineHeight: 54 }}>
               {inviteCode}
             </Text>
           </View>
 
-          <Text className="px-4 text-center text-base leading-6 text-ink-body">
+          <Body>
             {Platform.OS === "web"
               ? "Send lenken til gjengen. Den åpner gruppen med koden fylt inn."
-              : "Send koden til gjengen. De åpner appen, trykker «Har kode» og skriver den inn."}
-          </Text>
-        </View>
+              : "Send koden til gjengen. De åpner appen, trykker «Bli med i gruppe» og skriver den inn."}
+          </Body>
+        </Band>
+      </ScrollView>
 
-        <View className="gap-3 pb-10">
-          <Button
-            label={copied ? "Lenke kopiert" : Platform.OS === "web" ? "Del lenken" : "Del koden"}
-            onPress={handleShare}
-          />
-          <Button
-            label="Til lobbyen"
-            variant="secondary"
-            onPress={() =>
-              router.replace({ pathname: "/group-lobby", params: { groupId } })
-            }
-          />
-        </View>
-      </View>
-    </SafeAreaView>
+      <Footer>
+        <ActionBar
+          label={copied ? "Lenke kopiert" : Platform.OS === "web" ? "Del lenken" : "Del koden"}
+          onPress={handleShare}
+        />
+        <Button
+          label="Til lobbyen"
+          variant="secondary"
+          onPress={() => router.replace({ pathname: "/group-lobby", params: { groupId } })}
+        />
+      </Footer>
+    </View>
   );
 }

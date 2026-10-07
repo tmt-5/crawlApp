@@ -19,17 +19,15 @@ export default function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className={`w-full items-center justify-center border-[3px] border-ink py-4 active:opacity-80 ${
-        isPrimary
-          ? disabled
-            ? "bg-ink-muted"
-            : "bg-oxblood"
-          : "bg-transparent"
-      }`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      className={`min-h-[52px] w-full items-center justify-center border-[1.5px] border-ink px-4 py-3 active:opacity-85 ${
+        isPrimary ? "bg-ink" : "bg-paper"
+      } ${disabled ? "opacity-50" : ""}`}
     >
       <Text
-        className={`font-body-bold text-center text-sm uppercase tracking-[.1em] ${
-          isPrimary ? "text-paper-raised" : "text-ink"
+        className={`text-center font-body-bold text-[16px] ${
+          isPrimary ? "text-paper" : "text-ink"
         }`}
       >
         {label}

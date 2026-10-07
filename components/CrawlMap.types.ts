@@ -24,6 +24,8 @@ export type CrawlMapProps = {
   framePadding?: Partial<MapPadding>;
   // Distance from the top of the map to the map controls.
   controlsTop?: number;
+  // Hide the zoom buttons when the map is only a thin strip.
+  showControls?: boolean;
 };
 
 export function stopStatus(index: number, currentIndex: number): StopStatus {

@@ -82,3 +82,16 @@ export function legPath(stops: RouteVenueWithVenue[], index: number): LngLat[] |
 export function formatKm(meters: number): string {
   return (meters / 1000).toFixed(1).replace(".", ",");
 }
+
+// "45 min", "2 t", "1 t 30 min".
+export function formatMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} t` : `${hours} t ${rest} min`;
+}
+
+// "800 m" under a kilometre, "1,2 km" above.
+export function formatDistance(meters: number): string {
+  return meters < 1000 ? `${Math.round(meters / 10) * 10} m` : `${formatKm(meters)} km`;
+}

@@ -1,12 +1,26 @@
 import { Fragment, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import Button from "../components/Button";
 import CrawlMap from "../components/CrawlMap";
-import { formatKm, legWalk, routeWalk } from "../lib/geo";
+import Icon from "../components/Icon";
+import {
+  ActionBar,
+  Band,
+  Body,
+  ErrorText,
+  Fact,
+  Footer,
+  Heading,
+  Kicker,
+  Masthead,
+  Tag,
+} from "../components/ui";
+import { formatDistance, formatKm, formatMinutes, legWalk, routeWalk } from "../lib/geo";
 import { getRoute } from "../lib/routes";
 import { getProfile } from "../lib/storage";
+import { colors } from "../lib/theme";
 import type { CrawlRouteWithStops } from "../types/route";
 
 export default function RouteDetailScreen() {
@@ -37,143 +51,135 @@ export default function RouteDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#8c2f24" />
-      </SafeAreaView>
+      <View className="flex-1 items-center justify-center bg-cream">
+        <ActivityIndicator color={colors.ink} />
+      </View>
     );
   }
 
   if (!route) {
     return (
-      <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-        <View className="flex-1 items-center justify-center gap-4 px-5">
-          <Text className="text-center text-base text-ink-body">
-            {error ?? "Fant ikke ruten."}
-          </Text>
+      <View className="flex-1 bg-cream">
+        <StatusBar style="light" />
+        <Masthead label="Rute" />
+        <Band divider={false} className="gap-4 py-10">
+          {error ? <ErrorText>{error}</ErrorText> : <Body>Fant ikke ruten.</Body>}
           <Button label="Tilbake" variant="secondary" onPress={() => router.back()} />
-        </View>
-      </SafeAreaView>
+        </Band>
+      </View>
     );
   }
 
-  const { meters } = routeWalk(route.stops);
+  const { meters, minutes } = routeWalk(route.stops);
 
   return (
-    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-        <View className="gap-1 border-b-[3px] border-ink px-5 pb-5 pt-4">
-          <View className="flex-row items-center gap-3 pb-2">
-            <Pressable
-              onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-              hitSlop={8}
-              className="h-10 w-10 items-center justify-center border-[3px] border-ink bg-mustard"
-              style={{
-                shadowColor: "#241d18",
-                shadowOffset: { width: 3, height: 3 },
-                shadowOpacity: 1,
-                shadowRadius: 0,
-                elevation: 3,
-              }}
-            >
-              <Text className="font-body-bold text-base text-ink">←</Text>
-            </Pressable>
-            <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-              {[route.city, route.neighborhood].filter(Boolean).join(" · ")}
-            </Text>
+    <View className="flex-1 bg-cream">
+      <StatusBar style="light" />
+      <Masthead label="Rute" />
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <Band divider={false} className="gap-4 pb-6 pt-5">
+          <View className="gap-2">
+            <Kicker>{[route.city, route.neighborhood].filter(Boolean).join(" · ")}</Kicker>
+            <Heading size={36}>{route.name}</Heading>
+            {route.tagline ? (
+              <Text className="font-body-bold text-[16px] text-ink" style={{ lineHeight: 22 }}>
+                {route.tagline}
+              </Text>
+            ) : null}
           </View>
-          <Text
-            className="font-display text-3xl uppercase text-ink"
-            style={{ lineHeight: 34 }}
-          >
-            {route.name}
-          </Text>
-          <Text className="font-body-bold pt-1 text-[11px] uppercase tracking-[.12em] text-ink-muted">
-            {route.stops.length} stopp{meters > 0 ? ` · ca. ${formatKm(meters)} km gange` : ""}
-          </Text>
-        </View>
+          <View className="flex-row gap-3 border-y border-ink py-3">
+            <Fact grow label="Stopp" value={String(route.stops.length).padStart(2, "0")} />
+            {meters > 0 ? (
+              <>
+                <Fact grow label="Gange" value={formatMinutes(minutes)} />
+                <Fact grow label="Avstand" value={`${formatKm(meters)} km`} />
+              </>
+            ) : null}
+          </View>
+          {route.description ? <Body>{route.description}</Body> : null}
+        </Band>
 
-        <View className="h-[300px] border-b-[3px] border-ink">
+        <View className="h-[320px] border-y-2 border-ink">
           <CrawlMap stops={route.stops} currentIndex={-1} mode="embedded" />
         </View>
 
-        <View className="gap-5 px-5 pt-5">
-          {route.description ? (
-            <Text className="text-base leading-6 text-ink-body">{route.description}</Text>
-          ) : null}
-
-          <View className="border-[3px] border-ink bg-paper-raised">
-            {route.stops.map((stop, index) => {
-              const minutes = legWalk(route.stops, index)?.minutes ?? null;
-              return (
-                <Fragment key={stop.id}>
-                  {index > 0 ? (
-                    <View className="flex-row items-center gap-3 border-t border-ink/20 px-4 py-1.5">
-                      <View className="w-[30px] items-center">
-                        <View className="h-3 w-[3px] bg-oxblood" />
+        <View className="flex-1 bg-sand">
+          <Band tone="sand" divider={false} className="gap-3.5 pb-8 pt-6">
+            <View className="gap-0.5">
+              <Kicker>Stopp for stopp</Kicker>
+              <Heading size={26}>Rutetabell</Heading>
+            </View>
+            <View className="border-[1.5px] border-ink bg-paper">
+              {route.stops.map((stop, index) => {
+                const walk = legWalk(route.stops, index);
+                return (
+                  <Fragment key={stop.id}>
+                    {index > 0 ? (
+                      <View className="flex-row items-center gap-3 border-y border-ink bg-cream px-3.5 py-2">
+                        <View className="w-[34px] items-center">
+                          <View className="h-3.5 w-[3px] bg-red" />
+                        </View>
+                        <Kicker tone="soft">
+                          {walk
+                            ? `${walk.minutes} min gange · ${formatDistance(walk.meters)}`
+                            : "Gange"}
+                        </Kicker>
                       </View>
-                      <Text className="font-body-bold text-[10px] uppercase tracking-[.15em] text-ink-muted">
-                        {minutes != null ? `${minutes} min gange` : "Gange"}
-                      </Text>
-                    </View>
-                  ) : null}
-                  <Pressable
-                    onPress={() =>
-                      router.push({ pathname: "/venue", params: { venueId: stop.venue.id } })
-                    }
-                    className={`flex-row gap-3 px-4 py-3 active:bg-bar ${
-                      index > 0 ? "border-t border-ink/20" : ""
-                    }`}
-                  >
-                    <View className="h-[30px] w-[30px] items-center justify-center rounded-full border-[3px] border-ink bg-paper-raised">
-                      <Text className="font-display text-xs text-ink">{index + 1}</Text>
-                    </View>
-                    <View className="flex-1 gap-0.5">
-                      <View className="flex-row flex-wrap items-center gap-2">
-                        <Text className="font-display text-base uppercase text-ink">
+                    ) : null}
+                    <Pressable
+                      onPress={() =>
+                        router.push({ pathname: "/venue", params: { venueId: stop.venue.id } })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Stopp ${index + 1}: ${stop.venue.name}`}
+                      className="min-h-[64px] flex-row items-center gap-3 px-3.5 py-3 active:bg-sand"
+                    >
+                      <View className="h-[34px] w-[34px] items-center justify-center self-start border-[1.5px] border-ink bg-ochre">
+                        <Text className="font-display text-[18px] text-ink">{index + 1}</Text>
+                      </View>
+                      <View className="flex-1 gap-1">
+                        <Text className="font-body-bold text-[17px] text-ink" style={{ lineHeight: 20 }}>
                           {stop.venue.name}
                         </Text>
-                        {stop.venue.category ? (
-                          <View className="border-2 border-ink bg-mustard px-1.5 py-0.5">
-                            <Text className="font-body-bold text-[9px] uppercase tracking-[.08em] text-ink">
-                              {stop.venue.category}
-                            </Text>
+                        {stop.venue.tagline ? (
+                          <Text className="font-body text-[14px] text-ink" style={{ lineHeight: 20 }}>
+                            {stop.venue.tagline}
+                          </Text>
+                        ) : null}
+                        {stop.note ? (
+                          <Text className="font-body text-[13px] text-ink-soft" style={{ lineHeight: 18 }}>
+                            Tips: {stop.note}
+                          </Text>
+                        ) : null}
+                        {stop.venue.category || stop.venue.address ? (
+                          <View className="flex-row flex-wrap items-center gap-2 pt-0.5">
+                            {stop.venue.category ? <Tag label={stop.venue.category} /> : null}
+                            {stop.venue.address ? (
+                              <Kicker tone="soft">{stop.venue.address}</Kicker>
+                            ) : null}
                           </View>
                         ) : null}
                       </View>
-                      {stop.venue.tagline ? (
-                        <Text className="text-sm leading-5 text-ink-body">
-                          {stop.venue.tagline}
-                        </Text>
-                      ) : null}
-                      {stop.venue.address ? (
-                        <Text className="text-xs leading-4 text-ink-muted">
-                          {stop.venue.address}
-                        </Text>
-                      ) : null}
-                      {stop.note ? (
-                        <Text className="pt-1 text-xs leading-4 text-oxblood">{stop.note}</Text>
-                      ) : null}
-                    </View>
-                    <Text className="self-center font-body-bold text-base text-ink-muted">›</Text>
-                  </Pressable>
-                </Fragment>
-              );
-            })}
-          </View>
+                      <Icon name="arrow-right" size={18} />
+                    </Pressable>
+                  </Fragment>
+                );
+              })}
+            </View>
+          </Band>
         </View>
       </ScrollView>
 
-      <View className="gap-2 border-t-[3px] border-ink bg-bar px-5 pb-4 pt-4">
-        {error ? <Text className="font-body-bold text-sm text-oxblood">{error}</Text> : null}
-        <Button
+      <Footer>
+        <ActionBar
           label="Velg denne ruten"
           onPress={handleChoose}
           disabled={route.stops.length === 0}
         />
-        <Text className="text-center text-xs text-ink-muted">
+        <Text className="text-center font-body text-[13px] text-ink-soft">
           Neste steg: gi gruppen et navn og del koden med gjengen.
         </Text>
-      </View>
-    </SafeAreaView>
+      </Footer>
+    </View>
   );
 }

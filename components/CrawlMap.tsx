@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import MapView, { Marker, Polyline, UrlTile } from "react-native-maps";
 import type { Region } from "react-native-maps";
 import { legPath } from "../lib/geo";
+import { colors } from "../lib/theme";
 import type { Venue } from "../types/venue";
 import {
   legStatus,
@@ -21,9 +22,9 @@ type MapVenue = {
 };
 
 const LEG_STYLE: Record<LegStatus, { strokeColor: string; lineDashPattern?: number[] }> = {
-  walked: { strokeColor: "rgba(36,29,24,0.5)" },
-  current: { strokeColor: "#8c2f24" },
-  upcoming: { strokeColor: "#8c2f24", lineDashPattern: [2, 9] },
+  walked: { strokeColor: "rgba(23,21,17,0.5)" },
+  current: { strokeColor: "#E84B2C" },
+  upcoming: { strokeColor: "#E84B2C", lineDashPattern: [2, 9] },
 };
 
 const OSLO_FALLBACK: Region = {
@@ -39,78 +40,32 @@ function hasCoordinates(venue: Venue): venue is Venue & { latitude: number; long
   return typeof venue.latitude === "number" && typeof venue.longitude === "number";
 }
 
+// Same three states as the web pins: done has a check, current is larger with
+// a thicker frame, upcoming is just a number.
 function Pin({ status, number, selected }: { status: StopStatus; number: number; selected: boolean }) {
-  if (status === "done") {
-    return (
-      <View
-        style={{
-          width: 30,
-          height: 30,
-          borderRadius: 15,
-          borderWidth: 3,
-          borderColor: "#241d18",
-          backgroundColor: "#241d18",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#241d18",
-          shadowOffset: { width: 2, height: 2 },
-          shadowOpacity: 1,
-          shadowRadius: 0,
-          elevation: 2,
-          opacity: selected ? 0.85 : 1,
-        }}
-      >
-        <Text className="font-body-bold text-xs text-paper-raised">✓</Text>
-      </View>
-    );
-  }
-
-  if (status === "current") {
-    return (
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          borderWidth: 4,
-          borderColor: "#d9a026",
-          backgroundColor: "#8c2f24",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#241d18",
-          shadowOffset: { width: 2, height: 2 },
-          shadowOpacity: 1,
-          shadowRadius: 0,
-          elevation: 3,
-          opacity: selected ? 0.85 : 1,
-        }}
-      >
-        <Text className="font-display text-base text-paper-raised">{number}</Text>
-      </View>
-    );
-  }
-
+  const size = status === "current" ? 40 : 30;
   return (
     <View
       style={{
-        width: 30,
-        height: 30,
-        borderRadius: 15,
-        borderWidth: 3,
-        borderStyle: "dashed",
-        borderColor: "#241d18",
-        backgroundColor: "#fff8ec",
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        borderWidth: status === "current" ? 3 : 2,
+        borderColor: colors.ink,
+        backgroundColor:
+          status === "done" ? colors.ink : status === "current" ? colors.ochre : colors.paper,
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#241d18",
-        shadowOffset: { width: 2, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 2,
         opacity: selected ? 0.85 : 1,
       }}
     >
-      <Text className="font-display text-xs text-ink">{number}</Text>
+      <Text
+        className={`font-display ${status === "current" ? "text-[22px]" : "text-[15px]"} ${
+          status === "done" ? "text-paper" : "text-ink"
+        }`}
+      >
+        {status === "done" ? "✓" : number}
+      </Text>
     </View>
   );
 }
@@ -121,23 +76,18 @@ function Callout({ venue }: { venue: Venue }) {
       style={{
         maxWidth: 200,
         marginBottom: 8,
-        borderWidth: 3,
-        borderColor: "#241d18",
-        backgroundColor: "#fff8ec",
+        borderWidth: 1,
+        borderColor: colors.ink,
+        backgroundColor: colors.paper,
         paddingHorizontal: 10,
         paddingVertical: 8,
-        shadowColor: "#241d18",
-        shadowOffset: { width: 2, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 3,
       }}
     >
       <Text className="font-display text-sm uppercase text-ink" numberOfLines={1}>
         {venue.name}
       </Text>
       {venue.tagline ? (
-        <Text className="pt-0.5 text-xs leading-4 text-ink-body" numberOfLines={2}>
+        <Text className="pt-0.5 text-xs leading-4 text-ink-soft" numberOfLines={2}>
           {venue.tagline}
         </Text>
       ) : null}
@@ -249,7 +199,7 @@ export default function CrawlMap({ stops, currentIndex }: CrawlMapProps) {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: "#e1d3ba",
+          backgroundColor: "#DED0AE",
           opacity: 0.16,
         }}
       />

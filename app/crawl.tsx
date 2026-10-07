@@ -1,34 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import BottomSheet from "../components/BottomSheet";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "../components/Button";
 import CrawlMap from "../components/CrawlMap";
 import type { MapPerson } from "../components/CrawlMap.types";
-import CrawlProgress from "../components/CrawlProgress";
+import Icon from "../components/Icon";
 import MemberAvatars from "../components/MemberAvatars";
 import RatingSlider from "../components/RatingSlider";
+import {
+  ActionBar,
+  Body,
+  CONTENT_MAX_WIDTH,
+  ErrorText,
+  Fact,
+  FieldNote,
+  Heading,
+  Kicker,
+  StampButton,
+} from "../components/ui";
 import { saveCheckin } from "../lib/checkins";
-import { legWalk } from "../lib/geo";
+import { formatDistance, legWalk } from "../lib/geo";
 import { advanceToStop, completeCrawl, getGroup, getMembers } from "../lib/groups";
 import { useDeviceLocation, useGroupPositions } from "../lib/livePositions";
 import { locationSupported } from "../lib/location";
 import { getRoute } from "../lib/routes";
 import { getMembership, getShareLocation, setShareLocation } from "../lib/storage";
+import { colors, hardShadow } from "../lib/theme";
 import type { Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
 
-// Height of the sheet's always-visible part, above the bottom safe area.
-const PEEK_CONTENT_HEIGHT = 155;
-// Space the floating info card takes at the top of the map.
-const INFO_CARD_SPACE = 76;
+// Height of the map strip left above the stop panel when it is expanded.
+const MAP_STRIP_HEIGHT = 110;
+// Space the stop ticket takes at the top of the map.
+const TICKET_SPACE = 44;
 
 export default function CrawlScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
-  const peekHeight = PEEK_CONTENT_HEIGHT + insets.bottom;
 
   const [route, setRoute] = useState<CrawlRouteWithStops | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -38,6 +47,7 @@ export default function CrawlScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const [ratingBeer, setRatingBeer] = useState<number | null>(null);
   const [ratingAtmosphere, setRatingAtmosphere] = useState<number | null>(null);
@@ -78,13 +88,21 @@ export default function CrawlScreen() {
     }, [groupId])
   );
 
-  const sheetScroll = useRef<ScrollView>(null);
+  // Moving on to the next stop starts from a closed panel and empty ratings.
+  const panelScroll = useRef<ScrollView>(null);
   useEffect(() => {
     setRatingBeer(null);
     setRatingAtmosphere(null);
     setRatingOverall(null);
-    sheetScroll.current?.scrollTo({ y: 0, animated: false });
+    setExpanded(false);
   }, [index]);
+
+  // The "Neste stopp" button in the heading leads to the card at the bottom of
+  // the panel, where the group moves on.
+  const showNextStop = () => {
+    setExpanded(true);
+    setTimeout(() => panelScroll.current?.scrollToEnd({ animated: true }), 50);
+  };
 
   // Someone who joined after this screen loaded shows up in the live positions
   // before we know their name; fetch the member list again when that happens.
@@ -158,188 +176,169 @@ export default function CrawlScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator color="#8c2f24" />
-      </SafeAreaView>
+      <View className="flex-1 items-center justify-center bg-cream">
+        <ActivityIndicator color={colors.ink} />
+      </View>
     );
   }
 
   if (!venue || !memberId) {
     return (
-      <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-        <View className="flex-1 items-center justify-center gap-4 px-5">
-          <Text className="text-center text-base text-ink-body">
-            Fant ikke stoppet eller medlemskapet ditt.
-          </Text>
-          <Button label="Til forsiden" onPress={() => router.replace("/")} />
-        </View>
-      </SafeAreaView>
+      <View className="flex-1 items-center justify-center gap-4 bg-cream px-[18px]">
+        <Body className="text-center">Fant ikke stoppet eller medlemskapet ditt.</Body>
+        <Button label="Til forsiden" onPress={() => router.replace("/")} />
+      </View>
     );
   }
 
+  const bottomPadding = Math.max(insets.bottom, 12) + 10;
+
+  const heading = (
+    <View className="gap-3">
+      <View className="flex-row items-center justify-between gap-3">
+        <View className="flex-1 gap-[3px]">
+          <Kicker tone="ink">Du er på</Kicker>
+          {/* Long names step down a size so they wrap between words. */}
+          <Heading size={venue.name.length > 16 ? 24 : 32} numberOfLines={2}>
+            {venue.name}
+          </Heading>
+        </View>
+        <StampButton label={isLastStop ? "Fullfør" : "Neste stopp"} onPress={showNextStop} />
+      </View>
+      <View className="flex-row items-center justify-between gap-3">
+        <MemberAvatars members={members} />
+        {locationSupported ? (
+          <LocationChip sharing={sharing} located={!!position} error={locationError} onPress={toggleSharing} />
+        ) : null}
+      </View>
+    </View>
+  );
+
   return (
-    // overflow hidden: the collapsed sheet sits below the screen edge, which on
-    // web would otherwise make the whole page scrollable.
-    <View className="flex-1 overflow-hidden bg-paper">
-      <View style={{ flex: 1, marginBottom: peekHeight - 3 }}>
+    <View className="flex-1 bg-cream" style={{ paddingTop: insets.top }}>
+      <View
+        className="border-b-2 border-ink"
+        style={expanded ? { height: MAP_STRIP_HEIGHT, overflow: "hidden" } : { flex: 1 }}
+      >
         <CrawlMap
           stops={stops}
           currentIndex={index}
           people={people}
-          framePadding={{ top: insets.top + INFO_CARD_SPACE }}
-          controlsTop={insets.top + 12}
+          framePadding={{ top: TICKET_SPACE }}
+          controlsTop={14}
+          showControls={!expanded}
         />
-      </View>
-
-      <View
-        className="absolute left-5 gap-0.5 border-[3px] border-ink bg-paper-raised px-3 py-2"
-        style={{
-          top: insets.top + 12,
-          maxWidth: Math.min(360, windowWidth - 96),
-          shadowColor: "#241d18",
-          shadowOffset: { width: 3, height: 3 },
-          shadowOpacity: 1,
-          shadowRadius: 0,
-          elevation: 4,
-        }}
-      >
-        <Text className="font-body-bold text-[10px] uppercase tracking-[.2em] text-oxblood">
-          Stopp {index + 1} av {stops.length}
-        </Text>
-        {route ? (
-          <Text className="font-display text-lg uppercase text-ink" style={{ lineHeight: 20 }} numberOfLines={1}>
-            {route.name}
-          </Text>
-        ) : null}
-      </View>
-
-      <BottomSheet
-        peekHeight={peekHeight}
-        collapseKey={index}
-        topInset={insets.top + 96}
-        peek={({ open, toggle }) => (
-          <View className="gap-3">
-            <View className="flex-row items-center gap-3">
-              <View className="flex-1 gap-0.5">
-                <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-                  Nåværende stopp
-                </Text>
-                <Text
-                  className="font-display text-2xl uppercase text-ink"
-                  style={{ lineHeight: 26 }}
-                  numberOfLines={1}
-                >
-                  {venue.name}
-                </Text>
-              </View>
-              <Pressable
-                onPress={toggle}
-                accessibilityRole="button"
-                className="min-h-[40px] justify-center border-[3px] border-ink bg-mustard px-3 active:opacity-80"
-                style={{
-                  shadowColor: "#241d18",
-                  shadowOffset: { width: 3, height: 3 },
-                  shadowOpacity: 1,
-                  shadowRadius: 0,
-                  elevation: 3,
-                }}
-              >
-                <Text className="font-body-bold text-[11px] uppercase tracking-[.12em] text-ink">
-                  {open ? "Lukk" : "Sjekk inn"}
-                </Text>
-              </Pressable>
-            </View>
-
-            <View className="flex-row items-center justify-between gap-3">
-              <MemberAvatars members={members} />
-              {locationSupported ? (
-                <LocationChip sharing={sharing} located={!!position} error={locationError} onPress={toggleSharing} />
-              ) : null}
-            </View>
-
-            <View className="flex-row items-center justify-between gap-3 border-t border-ink/20 pt-2">
-              <Text className="flex-1 font-body-bold text-[11px] uppercase tracking-[.12em] text-ink" numberOfLines={1}>
-                {nextStop ? `Neste: ${nextStop.venue.name}` : "Siste stopp i kveld"}
-              </Text>
-              {nextWalk ? (
-                <Text className="font-body-bold text-[11px] uppercase tracking-[.12em] text-ink-muted">
-                  {nextWalk.minutes} min gange
-                </Text>
-              ) : null}
-            </View>
+        <View
+          className="absolute left-[18px] top-[14px] border-[1.5px] border-ink bg-cream px-2.5 py-2"
+          style={hardShadow}
+          accessibilityLabel={`Stopp ${index + 1} av ${stops.length}${route ? `, ${route.name}` : ""}`}
+        >
+          <Kicker tone="ink">
+            Stopp {index + 1} av {stops.length}
+          </Kicker>
+        </View>
+        {expanded ? null : (
+          <View
+            className="absolute bottom-6 left-[18px] flex-row items-center gap-2 border border-ink bg-cream p-2"
+            accessibilityLabel="Nord er opp"
+          >
+            <Icon name="navigation" size={14} />
+            <Kicker tone="ink">N</Kicker>
           </View>
         )}
-      >
-        <ScrollView
-          ref={sheetScroll}
-          className="flex-1 px-5"
-          contentContainerStyle={{ gap: 6, paddingBottom: 20 }}
-          showsVerticalScrollIndicator={false}
+      </View>
+
+      <View className="z-10" style={expanded ? { flex: 1 } : undefined}>
+        <Pressable
+          onPress={() => setExpanded((open) => !open)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          accessibilityLabel={expanded ? "Skjul detaljer om stoppet" : "Vis mer om stoppet"}
+          // 32px tall on screen, 44px to the finger.
+          hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
+          className="absolute top-[-17px] z-10 h-8 flex-row items-center gap-1.5 self-center border-[1.2px] border-ink bg-cream px-3 active:bg-sand"
         >
-          <View className="pb-2 pt-1">
-            <CrawlProgress total={stops.length} currentIndex={index} />
-          </View>
+          <Kicker tone="ink">{expanded ? "Skjul" : "Vis mer"}</Kicker>
+          <Icon
+            name="disclosure"
+            size={9}
+            height={5}
+            style={expanded ? undefined : { transform: [{ rotate: "180deg" }] }}
+          />
+        </Pressable>
 
-          <View
-            className="gap-2 border-[3px] border-ink bg-paper px-5 py-5"
-            style={{
-              shadowColor: "#241d18",
-              shadowOffset: { width: 4, height: 4 },
-              shadowOpacity: 1,
-              shadowRadius: 0,
-              elevation: 4,
-            }}
+        {expanded ? (
+          <ScrollView
+            ref={panelScroll}
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingTop: 30, paddingBottom: bottomPadding }}
           >
-            {venue.description ? (
-              <Text className="text-sm leading-5 text-ink-body">
-                {venue.description}
-              </Text>
-            ) : null}
-            {venue.fun_fact ? (
-              <View className="gap-0.5 pt-2">
-                <Text className="font-body-bold text-[10px] uppercase tracking-[.15em] text-oxblood">
-                  Fun fact
+            <View
+              className="w-full gap-6 self-center px-[18px]"
+              style={{ maxWidth: CONTENT_MAX_WIDTH }}
+            >
+              {heading}
+
+              {venue.description ? (
+                <View className="gap-1.5">
+                  <Kicker tone="ink">Historie</Kicker>
+                  <FieldNote>{venue.description}</FieldNote>
+                </View>
+              ) : null}
+
+              {venue.fun_fact ? (
+                <View className="gap-1.5">
+                  <Kicker tone="ink">Fun fact</Kicker>
+                  <FieldNote>{venue.fun_fact}</FieldNote>
+                </View>
+              ) : null}
+
+              <View className="gap-1">
+                <Kicker tone="ink">Vurder stedet</Kicker>
+                <Text className="font-body text-[13px] text-ink-soft">
+                  Valgfritt. Hopp over hvis dere bare vil videre.
                 </Text>
-                <Text className="text-sm leading-5 text-ink-body">{venue.fun_fact}</Text>
+                <View className="gap-2 pt-1">
+                  <RatingSlider label="Øl" value={ratingBeer} onChange={setRatingBeer} />
+                  <RatingSlider
+                    label="Stemning"
+                    value={ratingAtmosphere}
+                    onChange={setRatingAtmosphere}
+                  />
+                  <RatingSlider label="Overall" value={ratingOverall} onChange={setRatingOverall} />
+                </View>
               </View>
-            ) : null}
-          </View>
 
-          <View className="gap-5 pt-4">
-            <View className="gap-1">
-              <Text className="font-body-bold text-[11px] uppercase tracking-[.2em] text-oxblood">
-                Vurder stedet
-              </Text>
-              <Text className="text-xs leading-4 text-ink-muted">
-                Valgfritt. Hopp over hvis dere bare vil videre.
-              </Text>
+              <View className="gap-4 border-[1.5px] border-ink bg-paper p-3">
+                <View className="gap-2">
+                  <Kicker>{nextStop ? "Neste stopp" : "Siste stopp i kveld"}</Kicker>
+                  <Heading size={24}>{nextStop ? nextStop.venue.name : "Ruten er i mål"}</Heading>
+                </View>
+                {nextWalk ? (
+                  <View className="flex-row gap-6">
+                    <Fact label="Gange" value={`${nextWalk.minutes} min`} />
+                    <Fact label="Distanse" value={formatDistance(nextWalk.meters)} />
+                  </View>
+                ) : null}
+                {error ? <ErrorText>{error}</ErrorText> : null}
+                <ActionBar
+                  label={saving ? "Lagrer…" : isLastStop ? "Fullfør crawlen" : "Dra videre"}
+                  onPress={handleNext}
+                  disabled={saving}
+                />
+              </View>
             </View>
-            <RatingSlider label="Øl" value={ratingBeer} onChange={setRatingBeer} />
-            <RatingSlider
-              label="Stemning"
-              value={ratingAtmosphere}
-              onChange={setRatingAtmosphere}
-            />
-            <RatingSlider
-              label="Overall"
-              value={ratingOverall}
-              onChange={setRatingOverall}
-            />
+          </ScrollView>
+        ) : (
+          <View
+            className="w-full self-center px-[18px]"
+            style={{ maxWidth: CONTENT_MAX_WIDTH, paddingTop: 30, paddingBottom: bottomPadding }}
+          >
+            {heading}
           </View>
-
-          {error ? (
-            <Text className="font-body-bold pt-2 text-sm text-oxblood">{error}</Text>
-          ) : null}
-
-          <View className="pb-2 pt-4">
-            <Button
-              label={saving ? "Lagrer…" : isLastStop ? "Fullfør crawlen" : "Neste stopp"}
-              onPress={handleNext}
-              disabled={saving}
-            />
-          </View>
-        </ScrollView>
-      </BottomSheet>
+        )}
+      </View>
     </View>
   );
 }
@@ -359,6 +358,8 @@ function LocationChip({
   error: string | null;
   onPress: () => void;
 }) {
+  const failed = sharing && !!error;
+  const active = sharing && !error;
   const label = !sharing
     ? "Del posisjon"
     : error === "denied"
@@ -368,21 +369,28 @@ function LocationChip({
         : located
           ? "Deler posisjon"
           : "Finner deg…";
-  const active = sharing && !error;
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="switch"
       accessibilityState={{ checked: sharing }}
-      hitSlop={6}
-      className={`min-h-[36px] justify-center px-3 ${
-        active ? "bg-ink" : error && sharing ? "border-2 border-oxblood" : "border-2 border-ink"
+      // 36px tall on screen, 44px to the finger.
+      hitSlop={4}
+      className={`min-h-[36px] flex-row items-center gap-1.5 border-[1.2px] px-2.5 active:opacity-85 ${
+        active ? "border-ink bg-ink" : failed ? "border-red" : "border-ink"
       }`}
     >
+      {active ? (
+        <Text className="font-mono text-[11px] text-ochre">✓</Text>
+      ) : failed ? (
+        <Text className="font-mono text-[11px] text-red">×</Text>
+      ) : (
+        <Icon name="share" size={13} />
+      )}
       <Text
-        className={`font-body-bold text-[11px] uppercase tracking-[.12em] ${
-          active ? "text-paper" : error && sharing ? "text-oxblood" : "text-ink"
+        className={`font-mono text-[11px] uppercase tracking-[.04em] ${
+          active ? "text-paper-light" : failed ? "text-red" : "text-ink"
         }`}
       >
         {label}

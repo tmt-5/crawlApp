@@ -6,16 +6,26 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
-import { useFonts, AlfaSlabOne_400Regular } from "@expo-google-fonts/alfa-slab-one";
-import { DMSans_400Regular, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
+import {
+  useFonts,
+  Archivo_400Regular,
+  Archivo_600SemiBold,
+  Archivo_700Bold,
+} from "@expo-google-fonts/archivo";
+import { ArchivoNarrow_700Bold } from "@expo-google-fonts/archivo-narrow";
+import { Cousine_400Regular, Cousine_700Bold } from "@expo-google-fonts/cousine";
+import { colors } from "../lib/theme";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    AlfaSlabOne_400Regular,
-    DMSans_400Regular,
-    DMSans_700Bold,
+    Archivo_400Regular,
+    Archivo_600SemiBold,
+    Archivo_700Bold,
+    ArchivoNarrow_700Bold,
+    Cousine_400Regular,
+    Cousine_700Bold,
   });
 
   useEffect(() => {
@@ -35,7 +45,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: "#f4ece0" },
+            contentStyle: { backgroundColor: colors.cream },
           }}
         />
       </SafeAreaProvider>

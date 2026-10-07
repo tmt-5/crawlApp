@@ -1,28 +1,36 @@
-/* Web-only overrides for MapLibre's own controls, in the "Last Call" style. */
+/* Web-only overrides for MapLibre's own controls, in the paper palette. */
 
 .crawl-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib {
   margin: 0;
   padding: 1px 4px;
-  background: rgba(244, 236, 224, 0.75);
-  font-family: DMSans_400Regular, sans-serif;
+  background: rgba(243, 232, 207, 0.75);
+  font-family: Archivo_400Regular, sans-serif;
   font-size: 9px;
   line-height: 14px;
-  color: #5d5044;
+  color: #4f493f;
 }
 
 .crawl-map .maplibregl-ctrl-attrib a {
-  color: #5d5044;
+  color: #4f493f;
 }
 
 .crawl-map .maplibregl-cooperative-gesture-screen {
-  background: rgba(36, 29, 24, 0.6);
-  color: #f4ece0;
-  font-family: DMSans_700Bold, sans-serif;
+  background: rgba(23, 21, 17, 0.7);
+  color: #f3e8cf;
+  font-family: Cousine_700Bold, sans-serif;
   font-size: 12px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .crawl-map .maplibregl-marker {
   cursor: pointer;
+}
+
+/* Full-screen maps have a toggle tab centred on their bottom edge; keep the
+   attribution in the corner, clear of it. */
+.crawl-map--full .maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  max-width: 124px;
+  line-height: 11px;
+  text-align: right;
 }

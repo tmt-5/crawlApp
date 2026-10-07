@@ -133,4 +133,9 @@ Folk som deler posisjonen sin (Supabase Realtime Presence, ingenting lagres) vis
 
 Kontroller: stablede kvadratiske okerknapper øverst til høyre med 1px blekkramme, minst 44px — zoom inn, zoom ut, vis hele ruta og «Vis meg» når du deler posisjon. Rotasjon og pitch er av. Kart inne i en side som scroller bruker `mode="embedded"` (to fingre / ctrl+scroll for å flytte). Kart i fullskjerm tar alle gester.
 
-Crawl-skjermen: kartet fyller skjermen over sheeten. Et flytende infokort øverst til venstre viser stoppnummer og rutenavn, kontrollene ligger øverst til høyre. Den synlige delen av sheeten har en linje for nåværende stopp med «Sjekk inn»-knapp som åpner sheeten, gruppeavatarer med chip for posisjonsdeling og en «Neste: … · N min gange»-rad. Sheeten lukkes når gruppa går videre til neste stopp.
+Crawl-skjermen (Figma: «nextStop» og «currentStop»): kartet ligger øverst, stoppanelet under, skilt av en 2px blekklinje. Øverst til venstre på kartet står en billett med «Stopp 2 av 5», kontrollene ligger øverst til høyre og en liten «N»-etikett nederst til venstre. Panelet viser «Du er på» med stedsnavnet, en oker «Neste stopp»-knapp, gruppeavatarer og chip for posisjonsdeling. En «Vis mer» / «Skjul»-fane midt på skillelinja åpner panelet: kartet krymper til en stripe på 110px, og panelet viser historie, fun fact, vurdering og et «Neste stopp»-kort med gange, distanse og «Dra videre». Panelet lukkes når gruppa går videre til neste stopp.
+
+Billetten, kartkontrollene og oker handlingsknapper har en flat, forskjøvet blekkskygge (3px, `hardShadow` i `lib/theme.ts`). Ellers er alt flatt.
+
+## Tokens og delte komponenter
+Farger og fonter ligger i `tailwind.config.js` (klasser) og `lib/theme.ts` (kart, DOM-markører, inline-stiler). Hold dem like. Seksjonsbånd, etiketter, knapper, felt og topplinje ligger i `components/ui.tsx`. Ikonene er eksportert fra Figma til `assets/icons` og brukes gjennom `components/Icon.tsx`.
