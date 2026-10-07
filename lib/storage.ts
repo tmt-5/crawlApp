@@ -50,3 +50,14 @@ export async function setShareLocation(groupId: string, enabled: boolean): Promi
     await AsyncStorage.removeItem(`${SHARE_LOCATION_PREFIX}${groupId}`);
   }
 }
+
+const HOST_PREFIX = "crawl:host:";
+
+// The device that created the group is its host and the only one that can name it.
+export async function setGroupHost(groupId: string): Promise<void> {
+  await AsyncStorage.setItem(`${HOST_PREFIX}${groupId}`, "1");
+}
+
+export async function isGroupHost(groupId: string): Promise<boolean> {
+  return (await AsyncStorage.getItem(`${HOST_PREFIX}${groupId}`)) === "1";
+}

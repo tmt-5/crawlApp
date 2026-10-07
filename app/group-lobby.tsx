@@ -28,7 +28,14 @@ import {
 } from "../lib/groups";
 import { shareInvite } from "../lib/invite";
 import { getRoute } from "../lib/routes";
-import { getMembership, getProfile, saveMembership, saveProfile } from "../lib/storage";
+import {
+  getMembership,
+  getProfile,
+  isGroupHost,
+  saveMembership,
+  saveProfile,
+  setGroupHost,
+} from "../lib/storage";
 import { colors } from "../lib/theme";
 import type { Group, Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
@@ -50,6 +57,8 @@ export default function GroupLobbyScreen() {
   const [copied, setCopied] = useState(false);
   const [myName, setMyName] = useState("");
   const [myAvatar, setMyAvatar] = useState("");
+  // Only the one who created the group can give it a name.
+  const [isHost, setIsHost] = useState(false);
   // This device's member row; null until a name has been entered.
   const myMemberId = useRef<string | null>(null);
 
@@ -63,11 +72,13 @@ export default function GroupLobbyScreen() {
 
   const load = useCallback(async () => {
     if (!groupId) return;
-    const [groupData, memberData, membership] = await Promise.all([
+    const [groupData, memberData, membership, host] = await Promise.all([
       getGroup(groupId),
       getMembers(groupId),
       getMembership(groupId),
+      isGroupHost(groupId),
     ]);
+    setIsHost(host);
     myMemberId.current = memberData.some((m) => m.id === membership) ? membership : null;
     const routeData = groupData?.route_id ? await getRoute(groupData.route_id) : null;
     setGroup(groupData);
@@ -105,6 +116,8 @@ export default function GroupLobbyScreen() {
         return;
       }
       const created = await createGroup(routeData.name, profile, routeData);
+      await setGroupHost(created.group.id);
+      setIsHost(true);
       if (created.member) {
         await saveMembership(created.group.id, created.member.id);
         myMemberId.current = created.member.id;
@@ -169,7 +182,7 @@ export default function GroupLobbyScreen() {
   // The name is optional; an empty field keeps the route's name.
   const handleRename = async () => {
     const next = name.trim();
-    if (!group || next.length === 0 || next === group.name) return;
+    if (!group || !isHost || next.length === 0 || next === group.name) return;
     try {
       setGroup(await renameGroup(group.id, next));
       setError(null);
@@ -247,6 +260,8 @@ export default function GroupLobbyScreen() {
       </View>
     );
   }
+
+  const hasOwnName = group.name !== route?.name;
 
   const status =
     group.status === "completed"
@@ -330,16 +345,23 @@ export default function GroupLobbyScreen() {
             </View>
           </View>
 
-          <Field
-            label="Gruppenavn?"
-            aside="Frivillig"
-            value={name}
-            onChangeText={setName}
-            onBlur={handleRename}
-            onSubmitEditing={handleRename}
-            returnKeyType="done"
-            placeholder="F.eks. Fredagsgjengen"
-          />
+          {isHost ? (
+            <Field
+              label="Gruppenavn?"
+              aside="Frivillig"
+              value={name}
+              onChangeText={setName}
+              onBlur={handleRename}
+              onSubmitEditing={handleRename}
+              returnKeyType="done"
+              placeholder="F.eks. Fredagsgjengen"
+            />
+          ) : hasOwnName ? (
+            <View className="gap-1">
+              <Kicker tone="ink">Gruppenavn</Kicker>
+              <Text className="font-body-bold text-[16px] text-ink">{group.name}</Text>
+            </View>
+          ) : null}
         </Band>
       </ScrollView>
 

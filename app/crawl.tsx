@@ -236,11 +236,16 @@ export default function CrawlScreen() {
     />
   ) : null;
 
+  // A group still named after its route has no name of its own.
+  const groupName = group && group.name !== route?.name ? group.name : null;
+
   const heading = (
     <View className="gap-3">
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-1 gap-[3px]">
-          <Kicker tone="ink">Du er på</Kicker>
+          <Kicker tone="ink" numberOfLines={1}>
+            {groupName ? `${groupName} er nå på` : "Du er på"}
+          </Kicker>
           {/* Long names step down a size so they wrap between words. */}
           <Heading size={venue.name.length > 16 ? 24 : 32} numberOfLines={2}>
             {venue.name}
