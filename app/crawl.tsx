@@ -285,13 +285,14 @@ export default function CrawlScreen() {
               : undefined
           }
         />
-        {/* Quiet way out: flat, no shadow, 32px on screen and 44px to the finger. */}
+        {/* Way out: 32px on screen and 44px to the finger, with the same shadow as the ticket. */}
         <Pressable
           onPress={() => router.navigate("/")}
           accessibilityRole="button"
           accessibilityLabel="Tilbake til forsiden"
           hitSlop={6}
-          className="absolute left-[18px] top-[14px] h-8 w-8 items-center justify-center border border-ink bg-cream/90 active:bg-sand"
+          className="absolute left-[18px] top-[14px] h-8 w-8 items-center justify-center border-[1.5px] border-ink bg-cream active:bg-sand"
+          style={hardShadow}
         >
           <Icon name="arrow-right" size={14} style={{ transform: [{ rotate: "180deg" }] }} />
         </Pressable>
@@ -393,24 +394,38 @@ export default function CrawlScreen() {
                   onPress={handleNext}
                   disabled={saving}
                 />
-                {index > 0 ? (
-                  <Button
-                    variant="secondary"
-                    label={`Tilbake til ${stops[index - 1].venue.name}`}
-                    onPress={handleBack}
-                    disabled={saving}
-                  />
-                ) : null}
               </View>
+
+              {index > 0 ? (
+                <Pressable
+                  onPress={handleBack}
+                  disabled={saving}
+                  accessibilityRole="button"
+                  hitSlop={{ top: 6, bottom: 6 }}
+                  className="min-h-[44px] flex-row items-center justify-center gap-2 self-center px-3 active:opacity-60"
+                >
+                  <Icon name="arrow-right" size={12} style={{ transform: [{ rotate: "180deg" }] }} />
+                  <Text
+                    numberOfLines={1}
+                    className="shrink font-body text-[13px] text-ink-soft underline"
+                  >
+                    Tilbake til {stops[index - 1].venue.name}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           </ScrollView>
         ) : (
-          <View
+          // The whole panel opens the details; the code stamp and "Fullfør crawl" keep their own taps.
+          <Pressable
+            onPress={() => setExpanded(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Vis mer om stoppet"
             className="w-full self-center px-[18px]"
             style={{ maxWidth: CONTENT_MAX_WIDTH, paddingTop: 30, paddingBottom: bottomPadding }}
           >
             {heading}
-          </View>
+          </Pressable>
         )}
       </View>
     </View>
