@@ -48,8 +48,9 @@ export default function JoinGroupScreen() {
         return;
       }
       await saveMembership(result.group.id, result.member.id);
+      // A crawl that is already under way is joined straight on the map.
       router.replace({
-        pathname: "/group-lobby",
+        pathname: result.group.status === "active" ? "/crawl" : "/group-lobby",
         params: { groupId: result.group.id },
       });
     } catch {
@@ -68,7 +69,7 @@ export default function JoinGroupScreen() {
           <View className="gap-2">
             <Kicker>Gjengen venter</Kicker>
             <Heading size={36}>Bli med i gruppe</Heading>
-            <Body>Skriv inn koden du har fått, så havner du rett i lobbyen.</Body>
+            <Body>Skriv inn koden du har fått. Er crawlen i gang, havner du rett på kartet.</Body>
           </View>
 
           <Field

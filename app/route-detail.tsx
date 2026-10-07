@@ -38,14 +38,15 @@ export default function RouteDetailScreen() {
       .finally(() => setLoading(false));
   }, [routeId]);
 
-  // Picking a route is the first step; name, avatar and group come after.
+  // Picking a route leads to the lobby, where the group gets its name and
+  // code. Someone without a profile enters their name first.
   const handleChoose = async () => {
     if (!route) return;
     const profile = await getProfile();
     if (profile) {
-      router.push({ pathname: "/create-group", params: { routeId: route.id } });
+      router.push({ pathname: "/group-lobby", params: { routeId: route.id } });
     } else {
-      router.push({ pathname: "/avatar", params: { next: "create-group", routeId: route.id } });
+      router.push({ pathname: "/avatar", params: { next: "group-lobby", routeId: route.id } });
     }
   };
 
@@ -177,7 +178,7 @@ export default function RouteDetailScreen() {
           disabled={route.stops.length === 0}
         />
         <Text className="text-center font-body text-[13px] text-ink-soft">
-          Neste steg: gi gruppen et navn og del koden med gjengen.
+          Neste steg: du får en kode å dele med gjengen.
         </Text>
       </Footer>
     </View>

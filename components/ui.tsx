@@ -337,13 +337,17 @@ export const NO_OUTLINE = { outlineStyle: "none" } as object;
 export function Field({
   label,
   hint,
+  aside,
   className = "",
   ...input
-}: TextInputProps & { label: string; hint?: string }) {
+}: TextInputProps & { label: string; hint?: string; aside?: string }) {
   const [focused, setFocused] = useState(false);
   return (
     <View className="gap-2">
-      <Kicker tone="ink">{label}</Kicker>
+      <View className="flex-row items-end justify-between gap-3">
+        <Kicker tone="ink">{label}</Kicker>
+        {aside ? <Text className="font-body text-[13px] text-ink-soft">{aside}</Text> : null}
+      </View>
       <View
         className={`min-h-[52px] justify-center border-ink ${
           focused ? "border-2 bg-paper-light px-[13px]" : "border-[1.5px] bg-paper px-3.5"

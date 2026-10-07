@@ -9,7 +9,7 @@ import { AVATAR_OPTIONS } from "../lib/avatars";
 import { saveProfile } from "../lib/storage";
 import type { AvatarId } from "../types/user";
 
-type NextStep = "create-group" | "join-group";
+type NextStep = "group-lobby" | "join-group";
 
 export default function AvatarScreen() {
   const { next, routeId, code } = useLocalSearchParams<{
@@ -31,8 +31,8 @@ export default function AvatarScreen() {
     setSaving(true);
     try {
       await saveProfile({ name: name.trim(), avatarId });
-      if (next === "create-group" && routeId) {
-        router.replace({ pathname: "/create-group", params: { routeId } });
+      if (next === "group-lobby" && routeId) {
+        router.replace({ pathname: "/group-lobby", params: { routeId } });
       } else if (next === "join-group") {
         router.replace(code ? { pathname: "/join-group", params: { code } } : "/join-group");
       } else {

@@ -176,7 +176,11 @@ export default function ExploreScreen() {
           {lastGroup ? (
             <Pressable
               onPress={() =>
-                router.push({ pathname: "/group-lobby", params: { groupId: lastGroup.id } })
+                router.push({
+                  // A crawl under way resumes at the current stop; a waiting group goes to the lobby.
+                  pathname: lastGroup.status === "active" ? "/crawl" : "/group-lobby",
+                  params: { groupId: lastGroup.id },
+                })
               }
               accessibilityRole="button"
               className="border-t border-ochre active:opacity-85"

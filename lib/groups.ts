@@ -107,6 +107,21 @@ export async function getGroup(groupId: string): Promise<Group | null> {
   return data;
 }
 
+export async function renameGroup(groupId: string, name: string): Promise<Group> {
+  const { data, error } = await supabase
+    .from("groups")
+    .update({ name })
+    .eq("id", groupId)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw error ?? new Error("Kunne ikke endre gruppenavnet.");
+  }
+
+  return data;
+}
+
 export async function startCrawl(groupId: string): Promise<Group> {
   const { data, error } = await supabase
     .from("groups")

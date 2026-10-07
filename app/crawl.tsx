@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Button from "../components/Button";
+import CodeStamp from "../components/CodeStamp";
 import CrawlMap from "../components/CrawlMap";
 import type { MapPerson } from "../components/CrawlMap.types";
 import Icon from "../components/Icon";
@@ -22,12 +23,13 @@ import {
 import { saveCheckin } from "../lib/checkins";
 import { formatDistance, legWalk } from "../lib/geo";
 import { advanceToStop, completeCrawl, getGroup, getMembers } from "../lib/groups";
+import { shareInvite } from "../lib/invite";
 import { useDeviceLocation, useGroupPositions } from "../lib/livePositions";
 import { locationSupported } from "../lib/location";
 import { getRoute } from "../lib/routes";
 import { getMembership, getShareLocation, setShareLocation } from "../lib/storage";
 import { colors, hardShadow } from "../lib/theme";
-import type { Member } from "../types/group";
+import type { Group, Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
 
 // Height of the map strip left above the stop panel when it is expanded.
@@ -47,6 +49,8 @@ export default function CrawlScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [group, setGroup] = useState<Group | null>(null);
+  const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const [ratingBeer, setRatingBeer] = useState<number | null>(null);
@@ -74,6 +78,7 @@ export default function CrawlScreen() {
           }
           const routeData = group?.route_id ? await getRoute(group.route_id) : null;
           const stopCount = routeData?.stops.length ?? 0;
+          setGroup(group);
           setRoute(routeData);
           setIndex(Math.min(group?.current_stop_index ?? 0, Math.max(stopCount - 1, 0)));
           setMemberId(member);
@@ -132,6 +137,20 @@ export default function CrawlScreen() {
     const me = members.find((m) => m.id === memberId);
     return me && position ? [...others, { id: me.id, name: me.name, ...coords(position), isMe: true }] : others;
   }, [positions, position, members, memberId]);
+
+  // People can join while the crawl is under way, so the code stays at hand.
+  const handleShareCode = async () => {
+    if (!group) return;
+    const outcome = await shareInvite({
+      groupName: group.name,
+      routeName: route?.name,
+      code: group.invite_code,
+    });
+    if (outcome === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
 
   const toggleSharing = () => {
     if (!groupId) return;
@@ -207,8 +226,13 @@ export default function CrawlScreen() {
       </View>
       <View className="flex-row items-center justify-between gap-3">
         <MemberAvatars members={members} />
-        {locationSupported ? (
-          <LocationChip sharing={sharing} located={!!position} error={locationError} onPress={toggleSharing} />
+        {group ? (
+          <CodeStamp
+            size="small"
+            code={group.invite_code}
+            label={copied ? "Kopiert" : "Kode"}
+            onPress={handleShareCode}
+          />
         ) : null}
       </View>
     </View>
@@ -228,8 +252,18 @@ export default function CrawlScreen() {
           controlsTop={14}
           showControls={!expanded}
         />
+        {/* Quiet way out: flat, no shadow, 32px on screen and 44px to the finger. */}
+        <Pressable
+          onPress={() => router.navigate("/")}
+          accessibilityRole="button"
+          accessibilityLabel="Tilbake til forsiden"
+          hitSlop={6}
+          className="absolute left-[18px] top-[14px] h-8 w-8 items-center justify-center border border-ink bg-cream/90 active:bg-sand"
+        >
+          <Icon name="arrow-right" size={14} style={{ transform: [{ rotate: "180deg" }] }} />
+        </Pressable>
         <View
-          className="absolute left-[18px] top-[14px] border-[1.5px] border-ink bg-cream px-2.5 py-2"
+          className="absolute left-[58px] top-[14px] border-[1.5px] border-ink bg-cream px-2.5 py-2"
           style={hardShadow}
           accessibilityLabel={`Stopp ${index + 1} av ${stops.length}${route ? `, ${route.name}` : ""}`}
         >
@@ -279,6 +313,23 @@ export default function CrawlScreen() {
               style={{ maxWidth: CONTENT_MAX_WIDTH }}
             >
               {heading}
+
+              {locationSupported ? (
+                <View className="flex-row items-center justify-between gap-3 border-y border-ink py-3">
+                  <View className="flex-1 gap-0.5">
+                    <Kicker tone="ink">Finn hverandre</Kicker>
+                    <Text className="font-body text-[13px] text-ink-soft">
+                      Vis gjengen hvor du er på kartet. Ingenting lagres.
+                    </Text>
+                  </View>
+                  <LocationChip
+                    sharing={sharing}
+                    located={!!position}
+                    error={locationError}
+                    onPress={toggleSharing}
+                  />
+                </View>
+              ) : null}
 
               {venue.description ? (
                 <View className="gap-1.5">
