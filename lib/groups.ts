@@ -165,6 +165,21 @@ export async function advanceToStop(groupId: string, nextIndex: number): Promise
   return group;
 }
 
+// Undo for a mis-tap on "Dra videre": moves the group back to an earlier stop.
+export async function returnToStop(groupId: string, previousIndex: number): Promise<Group> {
+  const { error } = await supabase
+    .from("groups")
+    .update({ current_stop_index: previousIndex })
+    .eq("id", groupId)
+    .gt("current_stop_index", previousIndex);
+
+  if (error) throw error;
+
+  const group = await getGroup(groupId);
+  if (!group) throw new Error("Fant ikke gruppen.");
+  return group;
+}
+
 export async function completeCrawl(groupId: string, stopCount: number): Promise<void> {
   const { error } = await supabase
     .from("groups")

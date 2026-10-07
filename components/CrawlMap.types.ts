@@ -12,6 +12,15 @@ export type MapPerson = {
 
 export type MapPadding = { top: number; right: number; bottom: number; left: number };
 
+// Position sharing as a map control: on/off, whether a fix has arrived, and the
+// error code from the location hook ("denied" or another failure).
+export type ShareLocationControl = {
+  sharing: boolean;
+  located: boolean;
+  error: string | null;
+  onToggle: () => void;
+};
+
 export type CrawlMapProps = {
   stops: RouteVenueWithVenue[];
   // Index of the stop the group is at; -1 previews the route with nothing in progress.
@@ -26,6 +35,8 @@ export type CrawlMapProps = {
   controlsTop?: number;
   // Hide the zoom buttons when the map is only a thin strip.
   showControls?: boolean;
+  // Adds a pin button under the other controls that starts and stops sharing.
+  shareLocation?: ShareLocationControl;
 };
 
 export function stopStatus(index: number, currentIndex: number): StopStatus {

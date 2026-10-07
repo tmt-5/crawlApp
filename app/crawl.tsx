@@ -22,7 +22,7 @@ import {
 } from "../components/ui";
 import { saveCheckin } from "../lib/checkins";
 import { formatDistance, legWalk } from "../lib/geo";
-import { advanceToStop, completeCrawl, getGroup, getMembers } from "../lib/groups";
+import { advanceToStop, completeCrawl, getGroup, getMembers, returnToStop } from "../lib/groups";
 import { shareInvite } from "../lib/invite";
 import { useDeviceLocation, useGroupPositions } from "../lib/livePositions";
 import { locationSupported } from "../lib/location";
@@ -94,7 +94,6 @@ export default function CrawlScreen() {
   );
 
   // Moving on to the next stop starts from a closed panel and empty ratings.
-  const panelScroll = useRef<ScrollView>(null);
   useEffect(() => {
     setRatingBeer(null);
     setRatingAtmosphere(null);
@@ -102,12 +101,9 @@ export default function CrawlScreen() {
     setExpanded(false);
   }, [index]);
 
-  // The "Neste stopp" button in the heading leads to the card at the bottom of
-  // the panel, where the group moves on.
-  const showNextStop = () => {
-    setExpanded(true);
-    setTimeout(() => panelScroll.current?.scrollToEnd({ animated: true }), 50);
-  };
+  // Set when the group steps back to a stop it has already checked in at, so
+  // moving on again doesn't overwrite the earlier ratings with empty ones.
+  const revisited = useRef(false);
 
   // Someone who joined after this screen loaded shows up in the live positions
   // before we know their name; fetch the member list again when that happens.
@@ -164,14 +160,18 @@ export default function CrawlScreen() {
     setSaving(true);
     setError(null);
     try {
-      await saveCheckin({
-        group_id: groupId,
-        venue_id: venue.id,
-        member_id: memberId,
-        rating_beer: ratingBeer,
-        rating_atmosphere: ratingAtmosphere,
-        rating_overall: ratingOverall,
-      });
+      const rated = ratingBeer !== null || ratingAtmosphere !== null || ratingOverall !== null;
+      if (!revisited.current || rated) {
+        await saveCheckin({
+          group_id: groupId,
+          venue_id: venue.id,
+          member_id: memberId,
+          rating_beer: ratingBeer,
+          rating_atmosphere: ratingAtmosphere,
+          rating_overall: ratingOverall,
+        });
+      }
+      revisited.current = false;
 
       if (isLastStop) {
         await completeCrawl(groupId, stops.length);
@@ -188,6 +188,21 @@ export default function CrawlScreen() {
       setIndex(Math.min(group.current_stop_index, stops.length - 1));
     } catch {
       setError("Klarte ikke å lagre. Prøv igjen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBack = async () => {
+    if (saving || !groupId || index === 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const group = await returnToStop(groupId, index - 1);
+      revisited.current = true;
+      setIndex(Math.min(group.current_stop_index, stops.length - 1));
+    } catch {
+      setError("Klarte ikke å gå tilbake. Prøv igjen.");
     } finally {
       setSaving(false);
     }
@@ -212,6 +227,15 @@ export default function CrawlScreen() {
 
   const bottomPadding = Math.max(insets.bottom, 12) + 10;
 
+  const codeStamp = group ? (
+    <CodeStamp
+      size="small"
+      code={group.invite_code}
+      label={copied ? "Kopiert" : undefined}
+      onPress={handleShareCode}
+    />
+  ) : null;
+
   const heading = (
     <View className="gap-3">
       <View className="flex-row items-center justify-between gap-3">
@@ -222,18 +246,17 @@ export default function CrawlScreen() {
             {venue.name}
           </Heading>
         </View>
-        <StampButton label={isLastStop ? "Fullfør" : "Neste stopp"} onPress={showNextStop} />
+        {/* Moving on happens in the panel; only the last stop ends the crawl from here.
+            Otherwise the stamp takes this spot, centred against the name. */}
+        {isLastStop ? (
+          <StampButton label={saving ? "Lagrer…" : "Fullfør crawl"} onPress={handleNext} disabled={saving} />
+        ) : (
+          codeStamp
+        )}
       </View>
       <View className="flex-row items-center justify-between gap-3">
         <MemberAvatars members={members} />
-        {group ? (
-          <CodeStamp
-            size="small"
-            code={group.invite_code}
-            label={copied ? "Kopiert" : "Kode"}
-            onPress={handleShareCode}
-          />
-        ) : null}
+        {isLastStop ? codeStamp : null}
       </View>
     </View>
   );
@@ -251,6 +274,16 @@ export default function CrawlScreen() {
           framePadding={{ top: TICKET_SPACE }}
           controlsTop={14}
           showControls={!expanded}
+          shareLocation={
+            locationSupported
+              ? {
+                  sharing,
+                  located: !!position,
+                  error: locationError,
+                  onToggle: toggleSharing,
+                }
+              : undefined
+          }
         />
         {/* Quiet way out: flat, no shadow, 32px on screen and 44px to the finger. */}
         <Pressable
@@ -303,7 +336,6 @@ export default function CrawlScreen() {
 
         {expanded ? (
           <ScrollView
-            ref={panelScroll}
             className="flex-1"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingTop: 30, paddingBottom: bottomPadding }}
@@ -313,23 +345,6 @@ export default function CrawlScreen() {
               style={{ maxWidth: CONTENT_MAX_WIDTH }}
             >
               {heading}
-
-              {locationSupported ? (
-                <View className="flex-row items-center justify-between gap-3 border-y border-ink py-3">
-                  <View className="flex-1 gap-0.5">
-                    <Kicker tone="ink">Finn hverandre</Kicker>
-                    <Text className="font-body text-[13px] text-ink-soft">
-                      Vis gjengen hvor du er på kartet. Ingenting lagres.
-                    </Text>
-                  </View>
-                  <LocationChip
-                    sharing={sharing}
-                    located={!!position}
-                    error={locationError}
-                    onPress={toggleSharing}
-                  />
-                </View>
-              ) : null}
 
               {venue.description ? (
                 <View className="gap-1.5">
@@ -378,6 +393,14 @@ export default function CrawlScreen() {
                   onPress={handleNext}
                   disabled={saving}
                 />
+                {index > 0 ? (
+                  <Button
+                    variant="secondary"
+                    label={`Tilbake til ${stops[index - 1].venue.name}`}
+                    onPress={handleBack}
+                    disabled={saving}
+                  />
+                ) : null}
               </View>
             </View>
           </ScrollView>
@@ -396,56 +419,4 @@ export default function CrawlScreen() {
 
 function coords(position: { latitude: number; longitude: number }) {
   return { latitude: position.latitude, longitude: position.longitude };
-}
-
-function LocationChip({
-  sharing,
-  located,
-  error,
-  onPress,
-}: {
-  sharing: boolean;
-  located: boolean;
-  error: string | null;
-  onPress: () => void;
-}) {
-  const failed = sharing && !!error;
-  const active = sharing && !error;
-  const label = !sharing
-    ? "Del posisjon"
-    : error === "denied"
-      ? "Posisjon blokkert"
-      : error
-        ? "Fant deg ikke"
-        : located
-          ? "Deler posisjon"
-          : "Finner deg…";
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: sharing }}
-      // 36px tall on screen, 44px to the finger.
-      hitSlop={4}
-      className={`min-h-[36px] flex-row items-center gap-1.5 border-[1.2px] px-2.5 active:opacity-85 ${
-        active ? "border-ink bg-ink" : failed ? "border-red" : "border-ink"
-      }`}
-    >
-      {active ? (
-        <Text className="font-mono text-[11px] text-ochre">✓</Text>
-      ) : failed ? (
-        <Text className="font-mono text-[11px] text-red">×</Text>
-      ) : (
-        <Icon name="share" size={13} />
-      )}
-      <Text
-        className={`font-mono text-[11px] uppercase tracking-[.04em] ${
-          active ? "text-paper-light" : failed ? "text-red" : "text-ink"
-        }`}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
 }

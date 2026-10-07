@@ -1,7 +1,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./CrawlMap.web.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import maplibregl from "maplibre-gl";
 import type { GeoJSONSource, LngLatBoundsLike, Map as MapLibreMap, Marker } from "maplibre-gl";
 import { legPath } from "../lib/geo";
@@ -14,6 +14,7 @@ import {
   stopStatus,
   type CrawlMapProps,
   type MapPerson,
+  type ShareLocationControl,
   type StopStatus,
 } from "./CrawlMap.types";
 import Icon, { type IconName } from "./Icon";
@@ -39,6 +40,7 @@ export default function CrawlMap({
   framePadding,
   controlsTop = 12,
   showControls = true,
+  shareLocation,
 }: CrawlMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -224,6 +226,52 @@ export default function CrawlMap({
               }
             />
           ) : null}
+          {shareLocation ? <ShareLocationButton {...shareLocation} /> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+// Off: plain pin. On: thicker frame and a check. Failed: a cross. Status never
+// rests on colour alone.
+function ShareLocationButton({ sharing, located, error, onToggle }: ShareLocationControl) {
+  const failed = sharing && !!error;
+  const active = sharing && !error;
+  const label = !sharing
+    ? "Del posisjon med gjengen"
+    : error === "denied"
+      ? "Posisjon blokkert. Trykk for å slå av"
+      : error
+        ? "Fant deg ikke. Trykk for å slå av"
+        : located
+          ? "Deler posisjon. Trykk for å slutte"
+          : "Finner deg. Trykk for å slutte";
+
+  return (
+    <View>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: sharing }}
+        accessibilityLabel={label}
+        className={`h-11 w-11 items-center justify-center bg-ochre active:opacity-85 ${
+          sharing ? "border-[3px] border-ink" : "border border-ink"
+        }`}
+        style={hardShadow}
+      >
+        <Icon name="map-pin" size={20} />
+      </Pressable>
+      {sharing ? (
+        <View
+          pointerEvents="none"
+          className={`absolute -left-1.5 -top-1.5 h-[18px] w-[18px] items-center justify-center border border-ink ${
+            failed ? "bg-red" : "bg-ink"
+          }`}
+        >
+          <Text className={`font-mono text-[11px] ${failed ? "text-ink" : "text-ochre"}`}>
+            {failed ? "×" : active && located ? "✓" : "…"}
+          </Text>
         </View>
       ) : null}
     </View>

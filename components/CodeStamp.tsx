@@ -4,14 +4,16 @@ type CodeStampProps = {
   code: string;
   // "large" is the lobby's centrepiece, "small" sits in a row on the crawl screen.
   size?: "small" | "large";
-  // Replaces the "Kode" label for a moment, e.g. "Kopiert" after sharing.
+  // The large stamp says "Kode" above the code; the small one is just the code.
+  // Passing a label replaces that for a moment, e.g. "Kopiert" after sharing.
   label?: string;
   onPress?: () => void;
 };
 
 // The invite code as a slightly crooked red ink stamp.
-export default function CodeStamp({ code, size = "large", label = "Kode", onPress }: CodeStampProps) {
+export default function CodeStamp({ code, size = "large", label, onPress }: CodeStampProps) {
   const small = size === "small";
+  const shownLabel = label ?? (small ? null : "Kode");
   const stamp = (
     <View
       className={`border-red ${
@@ -21,7 +23,11 @@ export default function CodeStamp({ code, size = "large", label = "Kode", onPres
       }`}
       style={{ transform: [{ rotate: small ? "-2deg" : "-3deg" }] }}
     >
-      <Text className="font-mono text-[11px] uppercase tracking-[.04em] text-red">{label}</Text>
+      {shownLabel ? (
+        <Text className="font-mono text-[11px] uppercase tracking-[.04em] text-red">
+          {shownLabel}
+        </Text>
+      ) : null}
       <Text
         className="font-display text-red"
         style={
