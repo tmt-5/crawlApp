@@ -24,7 +24,7 @@ import { CITIES } from "../lib/cities";
 import { formatKm, formatMinutes, routeWalk } from "../lib/geo";
 import { getGroup } from "../lib/groups";
 import { getRoutesByCity } from "../lib/routes";
-import { getLastGroupId, getProfile } from "../lib/storage";
+import { getCity, getLastGroupId, saveCity } from "../lib/storage";
 import { colors } from "../lib/theme";
 import { getVenuesByCity } from "../lib/venues";
 import type { Group } from "../types/group";
@@ -36,9 +36,26 @@ const POSTER = require("../assets/images/route-poster.jpg");
 const matches = (query: string, ...fields: (string | null | undefined)[]) =>
   fields.some((field) => field?.toLowerCase().includes(query));
 
+const LAST_GROUP_LINK = {
+  planning: { pathname: "/group-lobby", kicker: "Gruppen din venter", action: "Fortsett" },
+  active: { pathname: "/crawl", kicker: "Crawlen pågår", action: "Fortsett" },
+  completed: { pathname: "/report", kicker: "Kveldsrapporten er klar", action: "Se rapport" },
+} as const;
+
+const DEFAULT_CITY = CITIES.find((c) => c.available)?.id ?? "Oslo";
+
+// A finished crawl stays on the front page for a day, as the way to its report.
+const REPORT_VISIBLE_MS = 24 * 60 * 60 * 1000;
+
+function stillRelevant(group: Group): boolean {
+  if (group.status !== "completed") return true;
+  return Date.now() - Date.parse(group.completed_at ?? group.created_at) < REPORT_VISIBLE_MS;
+}
+
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const [city, setCity] = useState(CITIES.find((c) => c.available)?.id ?? "Oslo");
+  // Null until the city from the last visit has been read, so the first fetch is for the right one.
+  const [city, setCity] = useState<string | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const [routes, setRoutes] = useState<CrawlRouteWithStops[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -50,6 +67,21 @@ export default function ExploreScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
+    getCity()
+      .then((stored) =>
+        setCity(CITIES.some((c) => c.id === stored && c.available) ? stored : DEFAULT_CITY)
+      )
+      .catch(() => setCity(DEFAULT_CITY));
+  }, []);
+
+  const pickCity = (id: string) => {
+    setCity(id);
+    setCityMenuOpen(false);
+    saveCity(id).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!city) return;
     setLoading(true);
     setError(null);
     setArea(null);
@@ -66,19 +98,12 @@ export default function ExploreScreen() {
     useCallback(() => {
       getLastGroupId()
         .then((groupId) => (groupId ? getGroup(groupId) : null))
-        .then((group) => setLastGroup(group && group.status !== "completed" ? group : null))
+        .then((group) => setLastGroup(group && stillRelevant(group) ? group : null))
         .catch(() => setLastGroup(null));
     }, [])
   );
 
-  const handleJoin = async () => {
-    const profile = await getProfile();
-    if (profile) {
-      router.push("/join-group");
-    } else {
-      router.push({ pathname: "/avatar", params: { next: "join-group" } });
-    }
-  };
+  const handleJoin = () => router.push("/join-group");
 
   const featured = routes[0];
   const areas = useMemo(
@@ -125,7 +150,7 @@ export default function ExploreScreen() {
               <Pressable
                 onPress={() => setCityMenuOpen((open) => !open)}
                 accessibilityRole="button"
-                accessibilityLabel={`By: ${city}. Bytt by`}
+                accessibilityLabel={`By: ${city ?? ""}. Bytt by`}
                 accessibilityState={{ expanded: cityMenuOpen }}
                 className="h-11 flex-row items-center gap-1.5 border-[1.5px] border-ink bg-paper px-3 active:opacity-85"
               >
@@ -145,10 +170,7 @@ export default function ExploreScreen() {
                       <Pressable
                         key={option.id}
                         disabled={!option.available}
-                        onPress={() => {
-                          setCity(option.id);
-                          setCityMenuOpen(false);
-                        }}
+                        onPress={() => pickCity(option.id)}
                         accessibilityRole="button"
                         accessibilityState={{ selected, disabled: !option.available }}
                         className={`min-h-[44px] flex-row items-center justify-between gap-3 px-3 active:bg-sand ${
@@ -178,7 +200,7 @@ export default function ExploreScreen() {
               onPress={() =>
                 router.push({
                   // A crawl under way resumes at the current stop; a waiting group goes to the lobby.
-                  pathname: lastGroup.status === "active" ? "/crawl" : "/group-lobby",
+                  pathname: LAST_GROUP_LINK[lastGroup.status].pathname,
                   params: { groupId: lastGroup.id },
                 })
               }
@@ -191,14 +213,14 @@ export default function ExploreScreen() {
               >
                 <View className="flex-1 gap-0.5">
                   <Kicker tone="ochre">
-                    {lastGroup.status === "active" ? "Crawlen pågår" : "Gruppen din venter"}
+                    {LAST_GROUP_LINK[lastGroup.status].kicker}
                   </Kicker>
                   <Text className="font-body-bold text-[16px] text-paper" numberOfLines={1}>
                     {lastGroup.name}
                   </Text>
                 </View>
                 <View className="border border-ochre px-3 py-2">
-                  <Kicker tone="ochre">Fortsett</Kicker>
+                  <Kicker tone="ochre">{LAST_GROUP_LINK[lastGroup.status].action}</Kicker>
                 </View>
               </View>
             </Pressable>

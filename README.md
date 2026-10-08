@@ -1,6 +1,6 @@
 # Crawl
 
-Ferdig planlagte barruter i Oslo. Velg en rute, samle gjengen med en kode og
+Ferdig planlagte barruter i Oslo og København. Velg en rute, samle gjengen med en kode og
 følg ruten stopp for stopp på kartet.
 
 Appen er bygget med Expo (React Native) og kjører først og fremst på web.
@@ -28,12 +28,14 @@ npm run web
 
 ## Flyten
 
-Hjem → rute → navn og rolle (første gang) → lobby → crawl.
+Hjem → rute → lobby (navn og frivillig profilbilde) → crawl → kveldsrapport.
 
 - Lobbyen oppretter gruppen med en gang og viser koden som deles med gjengen.
 - Andre blir med via lenke eller kode, også etter at crawlen er i gang.
 - Posisjoner deles direkte mellom deltakerne mens crawlen pågår. Ingenting
   lagres.
+- Kveldsrapporten kårer vinnersted og strengeste dommer ut fra karakterene, og
+  kan deles som plakatbilde eller lenke.
 
 ## Ruter og kart
 
@@ -46,6 +48,9 @@ node scripts/compute-route-legs.mjs
 ```
 
 Skriptet skriver en SQL-fil som må kjøres mot databasen.
+
+Byene står i `lib/cities.ts`. En ny by legges inn som en SQL-fil med steder,
+ruter og stopp, slik `0011_copenhagen_routes.sql` gjør for København.
 
 ## Publisering
 

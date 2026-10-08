@@ -5,6 +5,8 @@ export type StopStatus = "done" | "current" | "upcoming";
 export type MapPerson = {
   id: string;
   name: string;
+  // Profile avatar value (see lib/avatars.ts); empty shows initials.
+  avatar?: string;
   latitude: number;
   longitude: number;
   isMe: boolean;

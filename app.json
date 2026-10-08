@@ -38,7 +38,14 @@
           "backgroundColor": "#F3E8CF"
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Crawl bruker bildene dine bare når du velger et profilbilde."
+        }
+      ]
     ],
     "extra": {
       "eas": {

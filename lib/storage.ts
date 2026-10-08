@@ -11,7 +11,10 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
 
 export async function getProfile(): Promise<UserProfile | null> {
   const raw = await AsyncStorage.getItem(PROFILE_KEY);
-  return raw ? (JSON.parse(raw) as UserProfile) : null;
+  if (!raw) return null;
+  // Profiles saved before pictures existed have a role id instead of `avatar`.
+  const stored = JSON.parse(raw) as Partial<UserProfile>;
+  return stored.name ? { name: stored.name, avatar: stored.avatar ?? "" } : null;
 }
 
 export async function clearProfile(): Promise<void> {
@@ -32,6 +35,17 @@ export async function getLastGroupId(): Promise<string | null> {
   return AsyncStorage.getItem(LAST_GROUP_KEY);
 }
 
+const CITY_KEY = "crawl:city";
+
+// The city picked on the explore screen, so it is still selected on the next visit.
+export async function getCity(): Promise<string | null> {
+  return AsyncStorage.getItem(CITY_KEY);
+}
+
+export async function saveCity(city: string): Promise<void> {
+  await AsyncStorage.setItem(CITY_KEY, city);
+}
+
 const SHARE_LOCATION_PREFIX = "crawl:shareLocation:";
 
 // Whether this device shares its position with the group, remembered so a
@@ -46,4 +60,15 @@ export async function setShareLocation(groupId: string, enabled: boolean): Promi
   } else {
     await AsyncStorage.removeItem(`${SHARE_LOCATION_PREFIX}${groupId}`);
   }
+}
+
+const HOST_PREFIX = "crawl:host:";
+
+// The device that created the group is its host and the only one that can name it.
+export async function setGroupHost(groupId: string): Promise<void> {
+  await AsyncStorage.setItem(`${HOST_PREFIX}${groupId}`, "1");
+}
+
+export async function isGroupHost(groupId: string): Promise<boolean> {
+  return (await AsyncStorage.getItem(`${HOST_PREFIX}${groupId}`)) === "1";
 }

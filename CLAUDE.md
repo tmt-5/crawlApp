@@ -129,7 +129,7 @@ Status skal ikke vises med farge alene: ferdig har hake, nåværende er størst 
 
 Nåværende stopp (eller et trykket stopp) får en etikett: papirflate `#F6ECD6`, 1px blekkramme, Cousine Bold 11px versaler, maks 140px med ellipsis.
 
-Folk som deler posisjonen sin (Supabase Realtime Presence, ingenting lagres) vises som 32px sirkler med initialer, Archivo Bold. Andre har blekkfyll og lys tekst, du har okerfyll og blekktekst. Begge har 2px papirkant.
+Folk som deler posisjonen sin (Supabase Realtime Presence, ingenting lagres) vises som 32px sirkler med profilbildet eller avataren sin, ellers initialer i Archivo Bold. Med initialer har andre blekkfyll og lys tekst, du har okerfyll og blekktekst, begge med 2px papirkant. Med bilde har andre papirkant og du okerkant.
 
 Kontroller: stablede kvadratiske okerknapper øverst til høyre med 1px blekkramme, minst 44px — zoom inn, zoom ut, vis hele ruta, «Vis meg» når du deler posisjon og nederst en pin-knapp som starter og stopper posisjonsdeling (på: tykkere ramme og hake i hjørnet, feil: kryss). Rotasjon og pitch er av. Kart inne i en side som scroller bruker `mode="embedded"` (to fingre / ctrl+scroll for å flytte). Kart i fullskjerm tar alle gester.
 
@@ -137,8 +137,23 @@ Crawl-skjermen (Figma: «nextStop» og «currentStop»): kartet ligger øverst, 
 
 Billetten, kartkontrollene og oker handlingsknapper har en flat, forskjøvet blekkskygge (3px, `hardShadow` i `lib/theme.ts`). Ellers er alt flatt.
 
+## Byer
+Byene står i `lib/cities.ts` (Oslo og København har ruter). `id` er verdien i `routes.city` og `venues.city`, så den må skrives likt i databasen. Forsiden husker byen du valgte sist (`getCity` og `saveCity` i `lib/storage.ts`). Resten av appen vet ikke hvilken by den er i: en gruppe peker på en rute, og kartet rammer inn stoppene i ruta.
+
+En ny by legges inn som en SQL-migrasjon med steder, ruter og stopp, slik `0011_copenhagen_routes.sql` gjør, fulgt av etappene (`0012_copenhagen_route_legs.sql`). Hent koordinater fra OpenStreetMap og åpningstider fra stedets egen nettside, og la feltet stå tomt når kildene spriker.
+
 ## Gruppeflyten
-Rute → (navn og rolle i `/avatar` hvis profilen mangler) → `/group-lobby` → `/crawl`. Lobbyen er én skjerm («samleGjengen» i Figma): åpnet med `routeId` oppretter den gruppa med en gang, så koden vises umiddelbart som stempel (`components/CodeStamp.tsx`, trykk for å dele). Under står hvem som er klare, et frivillig gruppenavn (gruppa heter som ruta til noen gir den et eget navn) og «Start crawl». `/join-group` sender folk til lobbyen, eller rett til `/crawl` hvis crawlen er i gang.
+Rute → `/group-lobby` → `/crawl`. Lobbyen er én skjerm («samleGjengen» i Figma): åpnet med `routeId` oppretter den gruppa med en gang, så koden vises umiddelbart som stempel (`components/CodeStamp.tsx`, trykk for å dele). Øverst står «Navn og bilde» (`components/ProfileField.tsx`): en rund knapp for profilbildet ved siden av navnefeltet. Du blir med i gruppa idet navnet er skrevet inn, og kan endre navn og bilde der etterpå. Under står hvem som er klare, et frivillig gruppenavn (gruppa heter som ruta til noen gir den et eget navn) og «Start crawl». `/join-group` har det samme navnefeltet over invitasjonskoden og sender folk til lobbyen, eller rett til `/crawl` hvis crawlen er i gang.
+
+## Kveldsrapporten
+`/report?groupId=…` åpnes når crawlen fullføres, og er en vanlig side alle med lenken kan lese. Alt regnes ut fra `checkins` i `lib/report.ts` (`buildReport` er ren og tar gruppe, rute, medlemmer og check-ins): et stopp rangeres på snittet av «Overall», eller snittet av de to andre hvis ingen ga overall. Skjermen viser fakta (stopp, gange fra etappene, varighet, dommere), kveldens vinner, karakterboka, kåringer (beste drikke, beste stemning, kveldens krangel, bunnplassering, strengeste og snilleste dommer) og «Dine karakterer», som bare vises på enheten som ga dem. En kåring vises bare når det er noe å kåre mellom: minst to stopp eller to dommere.
+
+Varigheten kommer fra `groups.started_at` og `completed_at`, som databasen stempler selv med en trigger når statusen endres (`0010_crawl_times.sql`).
+
+Deling: `lib/reportPoster.web.ts` tegner en stående plakat (1080 × 1620) rett på et canvas når siden åpnes, og `lib/reportShare.ts` sender den til delingsarket på mobil (lagre bilde, send til venner) eller laster den ned på desktop. «Del lenke» deler eller kopierer adressen til rapporten. Native har ingen plakat ennå og deler tekst. Forsiden lenker til rapporten i et døgn etter at crawlen er ferdig.
+
+## Profil
+Det finnes ingen egen profilskjerm og ingen roller. Bare navn er obligatorisk. Profilbildet er frivillig: den runde knappen viser et pluss og åpner et lite panel med «Last opp eget bilde» (`lib/profilePhoto.ts` beskjærer bildet kvadratisk og krymper det til 128px JPEG) og fem tegnede avatarer fra `assets/avatars`. Uten bilde vises initialene. Verdien ligger i `members.avatar` som `""`, `preset:<id>` eller en data-URL, se `lib/avatars.ts`. `components/Avatar.tsx` tegner alle tre variantene.
 
 ## Tokens og delte komponenter
 Farger og fonter ligger i `tailwind.config.js` (klasser) og `lib/theme.ts` (kart, DOM-markører, inline-stiler). Hold dem like. Seksjonsbånd, etiketter, knapper, felt og topplinje ligger i `components/ui.tsx`. Ikonene er eksportert fra Figma til `assets/icons` og brukes gjennom `components/Icon.tsx`.

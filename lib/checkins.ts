@@ -16,3 +16,10 @@ export async function saveCheckin(input: CheckinInput): Promise<Checkin> {
 
   return data;
 }
+
+export async function getCheckins(groupId: string): Promise<Checkin[]> {
+  const { data, error } = await supabase.from("checkins").select().eq("group_id", groupId);
+
+  if (error) throw error;
+  return data ?? [];
+}

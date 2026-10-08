@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import Avatar from "../components/Avatar";
 import Button from "../components/Button";
 import CodeStamp from "../components/CodeStamp";
-import { initials } from "../components/CrawlMap.types";
-import { Monogram } from "../components/MemberAvatars";
+import ProfileField from "../components/ProfileField";
 import {
   ActionBar,
   Band,
@@ -17,18 +17,33 @@ import {
   Kicker,
   Masthead,
 } from "../components/ui";
-import { AVATAR_OPTIONS } from "../lib/avatars";
-import { createGroup, getGroup, getMembers, renameGroup, startCrawl } from "../lib/groups";
+import {
+  addMember,
+  createGroup,
+  getGroup,
+  getMembers,
+  renameGroup,
+  startCrawl,
+  updateMember,
+} from "../lib/groups";
 import { shareInvite } from "../lib/invite";
 import { getRoute } from "../lib/routes";
-import { getProfile, saveMembership } from "../lib/storage";
+import {
+  getMembership,
+  getProfile,
+  isGroupHost,
+  saveMembership,
+  saveProfile,
+  setGroupHost,
+} from "../lib/storage";
 import { colors } from "../lib/theme";
 import type { Group, Member } from "../types/group";
 import type { CrawlRouteWithStops } from "../types/route";
 
 // One screen from "I picked a route" to "we're off": opened with a routeId it
 // creates the group at once; with a groupId it loads it. Either way it shows
-// the code to share, who has joined, an optional group name and the start button.
+// the code to share, your own name and picture, who has joined, an optional
+// group name and the start button.
 export default function GroupLobbyScreen() {
   const { groupId, routeId } = useLocalSearchParams<{ groupId?: string; routeId?: string }>();
   const [group, setGroup] = useState<Group | null>(null);
@@ -40,10 +55,31 @@ export default function GroupLobbyScreen() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [copied, setCopied] = useState(false);
+  const [myName, setMyName] = useState("");
+  const [myAvatar, setMyAvatar] = useState("");
+  // Only the one who created the group can give it a name.
+  const [isHost, setIsHost] = useState(false);
+  // This device's member row; null until a name has been entered.
+  const myMemberId = useRef<string | null>(null);
+
+  useEffect(() => {
+    getProfile().then((profile) => {
+      if (!profile) return;
+      setMyName((current) => current || profile.name);
+      setMyAvatar((current) => current || profile.avatar);
+    });
+  }, []);
 
   const load = useCallback(async () => {
     if (!groupId) return;
-    const [groupData, memberData] = await Promise.all([getGroup(groupId), getMembers(groupId)]);
+    const [groupData, memberData, membership, host] = await Promise.all([
+      getGroup(groupId),
+      getMembers(groupId),
+      getMembership(groupId),
+      isGroupHost(groupId),
+    ]);
+    setIsHost(host);
+    myMemberId.current = memberData.some((m) => m.id === membership) ? membership : null;
     const routeData = groupData?.route_id ? await getRoute(groupData.route_id) : null;
     setGroup(groupData);
     setMembers(memberData);
@@ -74,20 +110,21 @@ export default function GroupLobbyScreen() {
     setError(null);
     try {
       const profile = await getProfile();
-      if (!profile) {
-        router.replace({ pathname: "/avatar", params: { next: "group-lobby", routeId } });
-        return;
-      }
       const routeData = await getRoute(routeId);
       if (!routeData) {
         setError("Fant ikke ruten.");
         return;
       }
       const created = await createGroup(routeData.name, profile, routeData);
-      await saveMembership(created.group.id, created.member.id);
+      await setGroupHost(created.group.id);
+      setIsHost(true);
+      if (created.member) {
+        await saveMembership(created.group.id, created.member.id);
+        myMemberId.current = created.member.id;
+      }
       setRoute(routeData);
       setGroup(created.group);
-      setMembers([created.member]);
+      setMembers(created.member ? [created.member] : []);
       // Same screen, now addressed by its group, so a reload or the back
       // button doesn't create another one.
       router.replace({ pathname: "/group-lobby", params: { groupId: created.group.id } });
@@ -109,10 +146,43 @@ export default function GroupLobbyScreen() {
     setRefreshing(false);
   };
 
+  // Saves your name and picture: the first time it adds you to the group,
+  // after that it updates your row. Saves run one at a time, so leaving the
+  // name field and pressing start right after can't add you twice.
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const saveMe = (nextName: string, nextAvatar: string): Promise<void> => {
+    const run = async () => {
+      const profile = { name: nextName.trim(), avatar: nextAvatar };
+      if (!group || group.status === "completed" || !profile.name) return;
+      await saveProfile(profile);
+      const memberId = myMemberId.current;
+      if (!memberId) {
+        const member = await addMember(group.id, profile);
+        await saveMembership(group.id, member.id);
+        myMemberId.current = member.id;
+        setMembers((current) => [...current, member]);
+        return;
+      }
+      const me = members.find((m) => m.id === memberId);
+      if (me && me.name === profile.name && me.avatar === profile.avatar) return;
+      const updated = await updateMember(memberId, profile);
+      setMembers((current) => current.map((m) => (m.id === updated.id ? updated : m)));
+    };
+    const next = saveQueue.current.then(run);
+    saveQueue.current = next.catch(() => {});
+    return next;
+  };
+
+  const handleSaveMe = (nextName: string, nextAvatar: string) => {
+    saveMe(nextName, nextAvatar)
+      .then(() => setError(null))
+      .catch(() => setError("Klarte ikke å lagre navnet og bildet ditt."));
+  };
+
   // The name is optional; an empty field keeps the route's name.
   const handleRename = async () => {
     const next = name.trim();
-    if (!group || next.length === 0 || next === group.name) return;
+    if (!group || !isHost || next.length === 0 || next === group.name) return;
     try {
       setGroup(await renameGroup(group.id, next));
       setError(null);
@@ -144,9 +214,18 @@ export default function GroupLobbyScreen() {
       router.push({ pathname: "/crawl", params: { groupId: group.id } });
       return;
     }
+    if (!myName.trim()) {
+      setError("Skriv inn navnet ditt først.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
+      // A failed edit of name or picture shouldn't hold up the crawl, as long
+      // as you are already in the group.
+      await saveMe(myName, myAvatar).catch((saveError) => {
+        if (!myMemberId.current) throw saveError;
+      });
       await handleRename();
       await startCrawl(group.id);
       router.replace({ pathname: "/crawl", params: { groupId: group.id } });
@@ -182,6 +261,8 @@ export default function GroupLobbyScreen() {
     );
   }
 
+  const hasOwnName = group.name !== route?.name;
+
   const status =
     group.status === "completed"
       ? "Crawlen er fullført"
@@ -212,6 +293,19 @@ export default function GroupLobbyScreen() {
             <Heading size={36}>Samle gjengen</Heading>
           </View>
 
+          {group.status !== "completed" ? (
+            <ProfileField
+              name={myName}
+              avatar={myAvatar}
+              onChangeName={setMyName}
+              onChangeAvatar={(next) => {
+                setMyAvatar(next);
+                handleSaveMe(myName, next);
+              }}
+              onCommitName={() => handleSaveMe(myName, myAvatar)}
+            />
+          ) : null}
+
           <View className="flex-row items-center gap-5 py-2 pl-1">
             <CodeStamp
               code={group.invite_code}
@@ -225,39 +319,49 @@ export default function GroupLobbyScreen() {
 
           <View className="gap-1.5">
             <Kicker tone="ink">
-              {members.length === 1 ? "1 crawler klar" : `${members.length} crawlere klare`}
+              {members.length === 0
+                ? "Ingen crawlere klare"
+                : members.length === 1
+                  ? "1 crawler klar"
+                  : `${members.length} crawlere klare`}
             </Kicker>
-            <View className="border-[1.5px] border-ink bg-paper">
-              {members.map((member, index) => {
-                const role = AVATAR_OPTIONS.find((option) => option.id === member.avatar);
-                return (
-                  <View
-                    key={member.id}
-                    className={`min-h-[52px] flex-row items-center gap-3 px-3.5 py-2.5 ${
-                      index > 0 ? "border-t-[1.5px] border-ink" : ""
-                    }`}
-                  >
-                    <Monogram name={initials(member.name)} surface={colors.paper} />
-                    <Text className="flex-1 font-body-bold text-[16px] text-ink" numberOfLines={1}>
-                      {member.name}
-                    </Text>
-                    {role ? <Kicker tone="ink">{role.label}</Kicker> : null}
-                  </View>
-                );
-              })}
+            {members.length === 0 ? (
+              <Body className="text-ink-soft">Skriv inn navnet ditt øverst, så er du med.</Body>
+            ) : null}
+            <View className={members.length === 0 ? "hidden" : "border-[1.5px] border-ink bg-paper"}>
+              {members.map((member, index) => (
+                <View
+                  key={member.id}
+                  className={`min-h-[52px] flex-row items-center gap-3 px-3.5 py-2.5 ${
+                    index > 0 ? "border-t-[1.5px] border-ink" : ""
+                  }`}
+                >
+                  <Avatar name={member.name} avatar={member.avatar} surface={colors.paper} />
+                  <Text className="flex-1 font-body-bold text-[16px] text-ink" numberOfLines={1}>
+                    {member.name}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
 
-          <Field
-            label="Gruppenavn?"
-            aside="Frivillig"
-            value={name}
-            onChangeText={setName}
-            onBlur={handleRename}
-            onSubmitEditing={handleRename}
-            returnKeyType="done"
-            placeholder="F.eks. Fredagsgjengen"
-          />
+          {isHost ? (
+            <Field
+              label="Gruppenavn?"
+              aside="Frivillig"
+              value={name}
+              onChangeText={setName}
+              onBlur={handleRename}
+              onSubmitEditing={handleRename}
+              returnKeyType="done"
+              placeholder="F.eks. Fredagsgjengen"
+            />
+          ) : hasOwnName ? (
+            <View className="gap-1">
+              <Kicker tone="ink">Gruppenavn</Kicker>
+              <Text className="font-body-bold text-[16px] text-ink">{group.name}</Text>
+            </View>
+          ) : null}
         </Band>
       </ScrollView>
 

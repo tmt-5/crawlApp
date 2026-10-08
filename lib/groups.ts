@@ -17,10 +17,10 @@ function generateInviteCode(): string {
   return code;
 }
 
-async function addMember(groupId: string, profile: UserProfile): Promise<Member> {
+export async function addMember(groupId: string, profile: UserProfile): Promise<Member> {
   const { data, error } = await supabase
     .from("members")
-    .insert({ group_id: groupId, name: profile.name, avatar: profile.avatarId })
+    .insert({ group_id: groupId, name: profile.name, avatar: profile.avatar })
     .select()
     .single();
 
@@ -33,9 +33,11 @@ async function addMember(groupId: string, profile: UserProfile): Promise<Member>
 
 export async function createGroup(
   name: string,
-  profile: UserProfile,
+  // Without a profile the group starts empty; the creator joins once they
+  // have entered a name in the lobby.
+  profile: UserProfile | null,
   route: { id: string; city: string }
-): Promise<{ group: Group; member: Member }> {
+): Promise<{ group: Group; member: Member | null }> {
   for (let attempt = 0; attempt < MAX_INVITE_CODE_ATTEMPTS; attempt++) {
     const { data: group, error } = await supabase
       .from("groups")
@@ -54,7 +56,7 @@ export async function createGroup(
       throw error;
     }
 
-    const member = await addMember(group.id, profile);
+    const member = profile ? await addMember(group.id, profile) : null;
     return { group, member };
   }
 
@@ -132,6 +134,22 @@ export async function startCrawl(groupId: string): Promise<Group> {
 
   if (error || !data) {
     throw error ?? new Error("Kunne ikke starte crawlen.");
+  }
+
+  return data;
+}
+
+// Changing your own name or picture after joining.
+export async function updateMember(memberId: string, profile: UserProfile): Promise<Member> {
+  const { data, error } = await supabase
+    .from("members")
+    .update({ name: profile.name, avatar: profile.avatar })
+    .eq("id", memberId)
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw error ?? new Error("Kunne ikke oppdatere profilen.");
   }
 
   return data;
