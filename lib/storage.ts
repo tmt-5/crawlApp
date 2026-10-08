@@ -35,6 +35,17 @@ export async function getLastGroupId(): Promise<string | null> {
   return AsyncStorage.getItem(LAST_GROUP_KEY);
 }
 
+const CITY_KEY = "crawl:city";
+
+// The city picked on the explore screen, so it is still selected on the next visit.
+export async function getCity(): Promise<string | null> {
+  return AsyncStorage.getItem(CITY_KEY);
+}
+
+export async function saveCity(city: string): Promise<void> {
+  await AsyncStorage.setItem(CITY_KEY, city);
+}
+
 const SHARE_LOCATION_PREFIX = "crawl:shareLocation:";
 
 // Whether this device shares its position with the group, remembered so a

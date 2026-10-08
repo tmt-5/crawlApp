@@ -24,7 +24,7 @@ import { CITIES } from "../lib/cities";
 import { formatKm, formatMinutes, routeWalk } from "../lib/geo";
 import { getGroup } from "../lib/groups";
 import { getRoutesByCity } from "../lib/routes";
-import { getLastGroupId } from "../lib/storage";
+import { getCity, getLastGroupId, saveCity } from "../lib/storage";
 import { colors } from "../lib/theme";
 import { getVenuesByCity } from "../lib/venues";
 import type { Group } from "../types/group";
@@ -42,6 +42,8 @@ const LAST_GROUP_LINK = {
   completed: { pathname: "/report", kicker: "Kveldsrapporten er klar", action: "Se rapport" },
 } as const;
 
+const DEFAULT_CITY = CITIES.find((c) => c.available)?.id ?? "Oslo";
+
 // A finished crawl stays on the front page for a day, as the way to its report.
 const REPORT_VISIBLE_MS = 24 * 60 * 60 * 1000;
 
@@ -52,7 +54,8 @@ function stillRelevant(group: Group): boolean {
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const [city, setCity] = useState(CITIES.find((c) => c.available)?.id ?? "Oslo");
+  // Null until the city from the last visit has been read, so the first fetch is for the right one.
+  const [city, setCity] = useState<string | null>(null);
   const [cityMenuOpen, setCityMenuOpen] = useState(false);
   const [routes, setRoutes] = useState<CrawlRouteWithStops[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -64,6 +67,21 @@ export default function ExploreScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
 
   useEffect(() => {
+    getCity()
+      .then((stored) =>
+        setCity(CITIES.some((c) => c.id === stored && c.available) ? stored : DEFAULT_CITY)
+      )
+      .catch(() => setCity(DEFAULT_CITY));
+  }, []);
+
+  const pickCity = (id: string) => {
+    setCity(id);
+    setCityMenuOpen(false);
+    saveCity(id).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!city) return;
     setLoading(true);
     setError(null);
     setArea(null);
@@ -132,7 +150,7 @@ export default function ExploreScreen() {
               <Pressable
                 onPress={() => setCityMenuOpen((open) => !open)}
                 accessibilityRole="button"
-                accessibilityLabel={`By: ${city}. Bytt by`}
+                accessibilityLabel={`By: ${city ?? ""}. Bytt by`}
                 accessibilityState={{ expanded: cityMenuOpen }}
                 className="h-11 flex-row items-center gap-1.5 border-[1.5px] border-ink bg-paper px-3 active:opacity-85"
               >
@@ -152,10 +170,7 @@ export default function ExploreScreen() {
                       <Pressable
                         key={option.id}
                         disabled={!option.available}
-                        onPress={() => {
-                          setCity(option.id);
-                          setCityMenuOpen(false);
-                        }}
+                        onPress={() => pickCity(option.id)}
                         accessibilityRole="button"
                         accessibilityState={{ selected, disabled: !option.available }}
                         className={`min-h-[44px] flex-row items-center justify-between gap-3 px-3 active:bg-sand ${

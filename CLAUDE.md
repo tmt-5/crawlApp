@@ -137,6 +137,11 @@ Crawl-skjermen (Figma: «nextStop» og «currentStop»): kartet ligger øverst, 
 
 Billetten, kartkontrollene og oker handlingsknapper har en flat, forskjøvet blekkskygge (3px, `hardShadow` i `lib/theme.ts`). Ellers er alt flatt.
 
+## Byer
+Byene står i `lib/cities.ts` (Oslo og København har ruter). `id` er verdien i `routes.city` og `venues.city`, så den må skrives likt i databasen. Forsiden husker byen du valgte sist (`getCity` og `saveCity` i `lib/storage.ts`). Resten av appen vet ikke hvilken by den er i: en gruppe peker på en rute, og kartet rammer inn stoppene i ruta.
+
+En ny by legges inn som en SQL-migrasjon med steder, ruter og stopp, slik `0011_copenhagen_routes.sql` gjør, fulgt av etappene (`0012_copenhagen_route_legs.sql`). Hent koordinater fra OpenStreetMap og åpningstider fra stedets egen nettside, og la feltet stå tomt når kildene spriker.
+
 ## Gruppeflyten
 Rute → `/group-lobby` → `/crawl`. Lobbyen er én skjerm («samleGjengen» i Figma): åpnet med `routeId` oppretter den gruppa med en gang, så koden vises umiddelbart som stempel (`components/CodeStamp.tsx`, trykk for å dele). Øverst står «Navn og bilde» (`components/ProfileField.tsx`): en rund knapp for profilbildet ved siden av navnefeltet. Du blir med i gruppa idet navnet er skrevet inn, og kan endre navn og bilde der etterpå. Under står hvem som er klare, et frivillig gruppenavn (gruppa heter som ruta til noen gir den et eget navn) og «Start crawl». `/join-group` har det samme navnefeltet over invitasjonskoden og sender folk til lobbyen, eller rett til `/crawl` hvis crawlen er i gang.
 

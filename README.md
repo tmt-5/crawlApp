@@ -1,6 +1,6 @@
 # Crawl
 
-Ferdig planlagte barruter i Oslo. Velg en rute, samle gjengen med en kode og
+Ferdig planlagte barruter i Oslo og København. Velg en rute, samle gjengen med en kode og
 følg ruten stopp for stopp på kartet.
 
 Appen er bygget med Expo (React Native) og kjører først og fremst på web.
@@ -48,6 +48,9 @@ node scripts/compute-route-legs.mjs
 ```
 
 Skriptet skriver en SQL-fil som må kjøres mot databasen.
+
+Byene står i `lib/cities.ts`. En ny by legges inn som en SQL-fil med steder,
+ruter og stopp, slik `0011_copenhagen_routes.sql` gjør for København.
 
 ## Publisering
 
