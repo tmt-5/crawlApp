@@ -157,3 +157,20 @@ Det finnes ingen egen profilskjerm og ingen roller. Bare navn er obligatorisk. P
 
 ## Tokens og delte komponenter
 Farger og fonter ligger i `tailwind.config.js` (klasser) og `lib/theme.ts` (kart, DOM-markører, inline-stiler). Hold dem like. Seksjonsbånd, etiketter, knapper, felt og topplinje ligger i `components/ui.tsx`. Ikonene er eksportert fra Figma til `assets/icons` og brukes gjennom `components/Icon.tsx`.
+
+## Arbeidsflyt i git
+Trym jobber alene og mest gjennom Claude Code, så Claude tar git-stegene selv i stedet for å be ham kjøre kommandoer. Commit, push, PR og merge gjøres likevel bare når han ber om det.
+
+`main` er det som ligger ute: Vercel bygger produksjon fra `main` og lager en forhåndsvisning for hver annen gren. Eneste vei til produksjon er en merge til `main`. Ikke bruk «Promote» eller «Rebuild» på en forhåndsvisning i Vercel, da kommer `main` og produksjon ut av takt.
+
+For alt som endrer oppførsel:
+1. Start fra fersk `main` (`git checkout main`, `git pull`).
+2. Lag en gren for den ene tingen, f.eks. `feature/stockholm` eller `feature/report-redesign`. To ting betyr to grener.
+3. Commit per avsluttet delsteg, med en engelsk melding som sier hva og hvorfor.
+4. Push grenen og test forhåndsvisningen fra Vercel, helst på mobil.
+5. Åpne en PR mot `main` med en tittel som beskriver endringen (ikke grennavnet), merge med vanlig merge-commit og slett grenen på GitHub og lokalt.
+6. Sjekk at den nye produksjonsutrullingen i Vercel har `main` som kilde.
+
+Hold grenene korte, dager og ikke uker. Varer en gren lenge, hent inn `main` underveis. Skrivefeil og rene dokumentasjonsendringer kan committes rett på `main`.
+
+Databasen har ingen grener: SQL som kjøres i Supabase treffer produksjon med en gang, og forhåndsvisninger leser den samme databasen. Skriv migrasjoner som er trygge før koden er ute (legge til er trygt, fjerne og gi nytt navn er ikke), og kjør SQL-en før PR-en merges. Claude har bare lesenøkkelen, så Trym kjører SQL-filene selv i SQL-editoren.
